@@ -354,10 +354,28 @@ include 'inc/header.php';
     color: #374151;
 }
 
+/* Ensure the cell keeps everything in a single line */
 .actions-cell {
     display: flex;
+    flex-direction: row; /* Force horizontal alignment */
+    align-items: center;
     gap: 0.5rem;
-    flex-wrap: wrap;
+    flex-wrap: nowrap; /* Prevent jumping to the next line */
+}
+
+/* Force the forms to stay inline and not take up 100% width */
+.actions-cell form {
+    display: flex;
+    align-items: center;
+    margin: 0;
+    gap: 0.25rem;
+}
+
+/* Make sure the select box doesn't get too wide */
+.actions-cell .form-select-sm {
+    padding: 0.4rem;
+    font-size: 0.85rem;
+    min-width: 110px;
 }
 
 .empty-state {
@@ -525,24 +543,23 @@ include 'inc/header.php';
                                 </td>
                                 <td>
                                     <div class="actions-cell">
-                                        <form method="POST" style="display: inline;">
+                                        <form method="POST">
                                             <input type="hidden" name="request_id" value="<?php echo $request['id']; ?>">
-                                            <select name="status" class="form-select form-select-sm" style="width: auto; display: inline-block;">
+                                            <select name="status" class="form-select form-select-sm">
                                                 <option value="pending" <?php echo ($request['status'] ?? 'pending') === 'pending' ? 'selected' : ''; ?>>Pending</option>
                                                 <option value="contacted" <?php echo ($request['status'] ?? 'pending') === 'contacted' ? 'selected' : ''; ?>>Contacted</option>
                                                 <option value="quoted" <?php echo ($request['status'] ?? 'pending') === 'quoted' ? 'selected' : ''; ?>>Quoted</option>
                                                 <option value="closed" <?php echo ($request['status'] ?? 'pending') === 'closed' ? 'selected' : ''; ?>>Closed</option>
                                             </select>
                                             <button type="submit" name="update_status" class="btn btn-sm btn-success">
-                                                <i class="fas fa-check"></i>
-                                                Update
+                                                <i class="fas fa-check"></i> Update
                                             </button>
                                         </form>
-                                        <form method="POST" style="display: inline;" onsubmit="return confirm('Are you sure you want to delete this request?');">
+
+                                        <form method="POST" onsubmit="return confirm('Are you sure?');">
                                             <input type="hidden" name="request_id" value="<?php echo $request['id']; ?>">
                                             <button type="submit" name="delete_request" class="btn btn-sm btn-danger">
-                                                <i class="fas fa-trash"></i>
-                                                Delete
+                                                <i class="fas fa-trash"></i> Delete
                                             </button>
                                         </form>
                                     </div>
