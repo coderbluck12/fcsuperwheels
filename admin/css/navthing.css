@@ -1,0 +1,19 @@
+/* Watermark Style */
+.watermark {
+    position: relative;
+}
+
+.watermark::before {
+    content: 'Master';  /* Your watermark text */
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 5rem;           /* Adjust size as needed */
+    color: rgba(0, 0, 0, 0.1); /* Light, semi-transparent color */
+    white-space: nowrap;
+    z-index: 1;                /* Ensure it's behind content */
+    pointer-events: none;      /* Makes the watermark non-interactive */
+	margin-top: 10%;
+	font-size: 600%;
+}

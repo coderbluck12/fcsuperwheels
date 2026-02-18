@@ -1,0 +1,24 @@
+[26-Nov-2024 22:28:52 UTC] PHP Warning:  include_once(../receipt/inc/functions.php): Failed to open stream: No such file or directory in /home2/pentago9/public_html/fcsuperwheels.com/request_processor.php on line 2
+[26-Nov-2024 22:28:52 UTC] PHP Warning:  include_once(): Failed opening '../receipt/inc/functions.php' for inclusion (include_path='.:/opt/alt/php81/usr/share/pear:/opt/alt/php81/usr/share/php:/usr/share/pear:/usr/share/php') in /home2/pentago9/public_html/fcsuperwheels.com/request_processor.php on line 2
+[26-Nov-2024 22:28:52 UTC] PHP Fatal error:  Uncaught Error: Call to undefined function validate_input() in /home2/pentago9/public_html/fcsuperwheels.com/request_processor.php:7
+Stack trace:
+#0 {main}
+  thrown in /home2/pentago9/public_html/fcsuperwheels.com/request_processor.php on line 7
+[26-Nov-2024 22:31:59 UTC] PHP Warning:  include_once(../receipt/inc/functions.php): Failed to open stream: No such file or directory in /home2/pentago9/public_html/fcsuperwheels.com/request_processor.php on line 2
+[26-Nov-2024 22:31:59 UTC] PHP Warning:  include_once(): Failed opening '../receipt/inc/functions.php' for inclusion (include_path='.:/opt/alt/php81/usr/share/pear:/opt/alt/php81/usr/share/php:/usr/share/pear:/usr/share/php') in /home2/pentago9/public_html/fcsuperwheels.com/request_processor.php on line 2
+[26-Nov-2024 22:31:59 UTC] PHP Fatal error:  Uncaught Error: Call to undefined function validate_input() in /home2/pentago9/public_html/fcsuperwheels.com/request_processor.php:7
+Stack trace:
+#0 {main}
+  thrown in /home2/pentago9/public_html/fcsuperwheels.com/request_processor.php on line 7
+[26-Nov-2024 22:33:04 UTC] PHP Warning:  include_once(../receipt/inc/functions.php): Failed to open stream: No such file or directory in /home2/pentago9/public_html/fcsuperwheels.com/request_processor.php on line 2
+[26-Nov-2024 22:33:04 UTC] PHP Warning:  include_once(): Failed opening '../receipt/inc/functions.php' for inclusion (include_path='.:/opt/alt/php81/usr/share/pear:/opt/alt/php81/usr/share/php:/usr/share/pear:/usr/share/php') in /home2/pentago9/public_html/fcsuperwheels.com/request_processor.php on line 2
+[26-Nov-2024 22:33:04 UTC] PHP Fatal error:  Uncaught Error: Call to undefined function validate_input() in /home2/pentago9/public_html/fcsuperwheels.com/request_processor.php:7
+Stack trace:
+#0 {main}
+  thrown in /home2/pentago9/public_html/fcsuperwheels.com/request_processor.php on line 7
+[26-Nov-2024 22:35:41 UTC] PHP Warning:  include_once(receipt/inc/functions.php): Failed to open stream: No such file or directory in /home2/pentago9/public_html/fcsuperwheels.com/request_processor.php on line 2
+[26-Nov-2024 22:35:41 UTC] PHP Warning:  include_once(): Failed opening 'receipt/inc/functions.php' for inclusion (include_path='.:/opt/alt/php81/usr/share/pear:/opt/alt/php81/usr/share/php:/usr/share/pear:/usr/share/php') in /home2/pentago9/public_html/fcsuperwheels.com/request_processor.php on line 2
+[26-Nov-2024 22:35:41 UTC] PHP Fatal error:  Uncaught Error: Call to undefined function validate_input() in /home2/pentago9/public_html/fcsuperwheels.com/request_processor.php:7
+Stack trace:
+#0 {main}
+  thrown in /home2/pentago9/public_html/fcsuperwheels.com/request_processor.php on line 7
