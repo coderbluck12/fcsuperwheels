@@ -218,7 +218,7 @@ try {
         }
 
         .price-value {
-            font-size: 2.5rem;
+            font-size: 2rem;
             font-weight: 700;
             color: var(--primary-color);
         }
