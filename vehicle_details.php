@@ -91,21 +91,34 @@ $display_price = !empty($vehicle['listing_price']) ? $vehicle['listing_price'] :
             top: 0;
             z-index: 100;
             box-shadow: 0 2px 12px rgba(0,0,0,0.07);
+            overflow: hidden;
         }
 
         .site-nav .container {
             display: flex;
             align-items: center;
             justify-content: space-between;
+            flex-wrap: nowrap;
+            gap: 0.75rem;
+        }
+
+        .nav-logo {
+            flex-shrink: 0;
         }
 
         .nav-logo img {
-            height: 52px;
+            height: 46px;
             width: auto;
             object-fit: contain;
+            display: block;
         }
 
-        .nav-links { display: flex; align-items: center; gap: 1.5rem; }
+        .nav-links {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            flex-shrink: 0;
+        }
 
         .nav-link-item {
             color: var(--gray-600);
@@ -113,6 +126,7 @@ $display_price = !empty($vehicle['listing_price']) ? $vehicle['listing_price'] :
             font-size: 0.875rem;
             font-weight: 500;
             transition: color 0.2s;
+            white-space: nowrap;
         }
         .nav-link-item:hover { color: var(--primary); }
 
@@ -129,11 +143,20 @@ $display_price = !empty($vehicle['listing_price']) ? $vehicle['listing_price'] :
             font-weight: 600;
             text-decoration: none;
             transition: all 0.2s;
+            white-space: nowrap;
+            flex-shrink: 0;
         }
         .btn-nav-back:hover {
             background: var(--primary);
             border-color: var(--primary);
             color: white;
+        }
+
+        /* Hide text nav links on mobile, keep back button */
+        @media (max-width: 576px) {
+            .nav-link-item { display: none; }
+            .btn-nav-back { padding: 0.45rem 0.75rem; font-size: 0.8125rem; }
+            .nav-logo img { height: 38px; }
         }
 
         /* ── Breadcrumb ── */
