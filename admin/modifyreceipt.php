@@ -84,7 +84,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 </head>
 <body>
 <div class="page-wrapper">
-    <?php include_once('inc/menu.php'); ?>
+    <?php include_once('inc/header.php'); ?>
     <div class="page-content--bgf7">
         <div class="container mt-4">
             <h3>Edit Receipt</h3>

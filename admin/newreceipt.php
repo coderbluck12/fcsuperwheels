@@ -38,7 +38,7 @@ $signatures = $sigStmt->fetchAll(PDO::FETCH_ASSOC);
   <?php include_once('inc/header.php'); ?>
   <div class="page-content--bgf7">
     <div class="container mt-4">
-      <h3>Generate New Receipt</h3>
+      <h3 style="margin-top: 80px; margin-bottom: 10px;">Generate New Receipt</h3>
       <a href="dashboard.php" class="btn btn-sm btn-primary mb-3">← Back to Dashboard</a>
 
       <form method="POST" action="receipt_processor.php" onsubmit="return validateNumbers()" enctype="multipart/form-data">

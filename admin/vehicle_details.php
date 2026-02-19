@@ -30,6 +30,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_expense'])) {
     }
 }
 
+// Delete Expense
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_expense'])) {
+    $expense_id = (int)$_POST['expense_id'];
+
+    try {
+        $stmt = $pdo->prepare("DELETE FROM expenses WHERE id = ? AND vehicle_id = ?");
+        $stmt->execute([$expense_id, $id]);
+        $message = '<div class="alert alert-success alert-dismissible fade show" role="alert">
+                        Expense deleted successfully!
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>';
+    } catch (PDOException $e) {
+        $message = '<div class="alert alert-danger alert-dismissible fade show" role="alert">
+                        Error deleting expense: ' . $e->getMessage() . '
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>';
+    }
+}
+
 // Fetch Vehicle
 $stmt = $pdo->prepare("SELECT * FROM vehicles WHERE id = ?");
 $stmt->execute([$id]);
@@ -300,10 +319,17 @@ include 'inc/header.php';
         background: #fafafa;
     }
 
-    .expense-amount {
-        font-weight: 800;
+    .btn-delete-expense {
         color: #dc2626;
-        font-size: 1.05rem;
+        background: none;
+        border: none;
+        padding: 0.25rem;
+        cursor: pointer;
+        transition: color 0.2s;
+    }
+
+    .btn-delete-expense:hover {
+        color: #991b1b;
     }
 
     .empty-state {
@@ -363,7 +389,7 @@ include 'inc/header.php';
             <h1><?php echo htmlspecialchars($vehicle['make'] . ' ' . $vehicle['model']); ?></h1>
             <div class="vehicle-meta">
                 <span><i class="bi bi-calendar3"></i> <?php echo $vehicle['year']; ?></span>
-                <span><i class="bi bi-hash"></i> VIN: <?php echo htmlspecialchars($vehicle['vin'] ?: 'Not provided'); ?></span>
+                <span><i class="bi bi-hash"></i> Chassis No: <?php echo htmlspecialchars($vehicle['vin'] ?: 'Not provided'); ?></span>
             </div>
         </div>
         <a href="inventory.php" class="back-link">
@@ -401,19 +427,12 @@ include 'inc/header.php';
                     <span class="spec-value"><?php echo htmlspecialchars($vehicle['color'] ?: '—'); ?></span>
                 </div>
                 <div class="spec-row">
-                    <span class="spec-label">Purchase Price</span>
+                    <span class="spec-label">Cost Price</span>
                     <span class="spec-value">₦<?php echo number_format($vehicle['purchase_price'], 2); ?></span>
                 </div>
                 <div class="spec-row">
-                    <span class="spec-label">Total Expenses</span>
-                    <span class="spec-value" style="color: #dc2626;">₦<?php echo number_format($total_expenses, 2); ?></span>
-                </div>
-                
-                <div class="financial-highlight">
-                    <div class="spec-row" style="border: none;">
-                        <span class="spec-label">Total Investment</span>
-                        <span class="spec-value">₦<?php echo number_format($total_cost, 2); ?></span>
-                    </div>
+                    <span class="spec-label">Listing Price</span>
+                    <span class="spec-value">₦<?php echo number_format($vehicle['listing_price'], 2); ?></span>
                 </div>
 
                 <div class="spec-row">
@@ -450,6 +469,7 @@ include 'inc/header.php';
                                 <th>Date</th>
                                 <th>Description</th>
                                 <th>Amount</th>
+                                <th style="width: 50px;"></th>
                             </tr>
                         </thead>
                         <tbody>
@@ -458,6 +478,12 @@ include 'inc/header.php';
                                 <td><?php echo date('M j, Y', strtotime($expense['expense_date'])); ?></td>
                                 <td><strong><?php echo htmlspecialchars($expense['description']); ?></strong></td>
                                 <td class="expense-amount">₦<?php echo number_format($expense['amount'], 2); ?></td>
+                                <td>
+                                    <button type="button" class="btn-delete-expense" 
+                                            onclick="confirmDeleteExpense(<?php echo $expense['id']; ?>, '<?php echo addslashes(htmlspecialchars($expense['description'])); ?>', <?php echo $expense['amount']; ?>)">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </td>
                             </tr>
                             <?php endforeach; ?>
                         </tbody>
@@ -524,6 +550,36 @@ function openExpenseModal() {
     const modal = new bootstrap.Modal(document.getElementById('addExpenseModal'));
     modal.show();
 }
+
+function confirmDeleteExpense(id, description, amount) {
+    document.getElementById('delete_expense_id').value = id;
+    document.getElementById('delete_expense_info').textContent = description + ' (₦' + parseFloat(amount).toLocaleString() + ')';
+    const modal = new bootstrap.Modal(document.getElementById('deleteExpenseModal'));
+    modal.show();
+}
 </script>
+
+<!-- Delete Expense Modal -->
+<div class="modal fade" id="deleteExpenseModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="POST">
+                <div class="modal-header bg-danger text-white">
+                    <h5 class="modal-title" style="font-weight: 700;">Confirm Delete</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" name="expense_id" id="delete_expense_id">
+                    <p>Are you sure you want to delete this expense?</p>
+                    <p class="fw-bold" id="delete_expense_info"></p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" name="delete_expense" class="btn btn-danger">Delete</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
 
 <?php include 'inc/footer.php'; ?>

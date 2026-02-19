@@ -1,6 +1,7 @@
 <?php
 include_once('inc/session_manager.php');
 include_once('inc/access_log.php');
+include_once('inc/pagination.php'); // Added pagination include
 
 // Log page access
 log_access('VIEW_MANAGE_STAFF', 'staffs.php');
@@ -188,32 +189,54 @@ $search = isset($_GET['search']) ? trim($_GET['search']) : '';
 $level_filter = isset($_GET['level']) ? $_GET['level'] : '';
 $status_filter = isset($_GET['status']) ? $_GET['status'] : '';
 
-// Build the query
-$query = "SELECT * FROM user WHERE 1=1";
+// Build the base query conditions
+$base_query = "FROM user WHERE 1=1";
 $params = [];
 
 if (!empty($search)) {
-    $query .= " AND (username LIKE ? OR firstname LIKE ? OR lastname LIKE ? OR email LIKE ?)";
+    $base_query .= " AND (username LIKE ? OR firstname LIKE ? OR lastname LIKE ? OR email LIKE ?)";
     $search_param = "%$search%";
     $params = array_merge($params, [$search_param, $search_param, $search_param, $search_param]);
 }
 
 if (!empty($level_filter)) {
-    $query .= " AND level = ?";
+    $base_query .= " AND level = ?";
     $params[] = $level_filter;
 }
 
 if ($status_filter !== '') {
-    $query .= " AND status = ?";
+    $base_query .= " AND status = ?";
     $params[] = $status_filter;
 }
 
-$query .= " ORDER BY created_at DESC";
-
 try {
+    // 1. Get total count for pagination
+    $count_stmt = $pdo->prepare("SELECT COUNT(*) " . $base_query);
+    $count_stmt->execute($params);
+    $total_items = $count_stmt->fetchColumn();
+
+    // 2. Setup Pagination
+    $items_per_page = 10;
+    $current_page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
+    $pagination = new Pagination($total_items, $items_per_page, $current_page);
+    $offset = $pagination->getOffset();
+
+    // 3. Fetch paginated data
+    $query = "SELECT * " . $base_query . " ORDER BY created_at DESC LIMIT :limit OFFSET :offset";
     $stmt = $pdo->prepare($query);
-    $stmt->execute($params);
+    
+    // Bind all previous params
+    foreach ($params as $key => $value) {
+        $stmt->bindValue($key + 1, $value);
+    }
+    
+    // Bind limit and offset as integers
+    $stmt->bindValue(':limit', (int)$items_per_page, PDO::PARAM_INT);
+    $stmt->bindValue(':offset', (int)$offset, PDO::PARAM_INT);
+    
+    $stmt->execute();
     $staff_members = $stmt->fetchAll();
+    
 } catch (PDOException $e) {
     $staff_members = [];
     $message = '<div class="alert alert-danger alert-dismissible fade show" role="alert">
@@ -569,7 +592,6 @@ include 'inc/header.php';
 
     <?php echo $message; ?>
 
-    <!-- Filters -->
     <div class="filter-card">
         <h3 class="filter-title"><i class="fas fa-filter"></i> Filter Staff</h3>
         <form method="GET">
@@ -611,7 +633,6 @@ include 'inc/header.php';
         </form>
     </div>
 
-    <!-- Staff Table -->
     <div class="table-card">
         <div class="table-header">
             <h3><i class="fas fa-users"></i> Staff Members</h3>
@@ -712,10 +733,25 @@ include 'inc/header.php';
                 </tbody>
             </table>
         </div>
+        
+        <?php if (isset($pagination) && $pagination->getTotalPages() > 1): ?>
+            <div class="d-flex justify-content-between align-items-center p-4 border-top">
+                <div class="text-muted" style="font-size: 0.875rem;">
+                    <?php echo $pagination->getPaginationInfo(); ?>
+                </div>
+                <div>
+                    <?php 
+                    // Preserve filters when navigating pages
+                    $base_url = "staffs.php?search=" . urlencode($search) . "&level=" . urlencode($level_filter) . "&status=" . urlencode($status_filter);
+                    echo $pagination->generatePaginationLinks($base_url); 
+                    ?>
+                </div>
+            </div>
+        <?php endif; ?>
+        
     </div>
 </div>
 
-<!-- Edit Staff Modal -->
 <div class="modal fade" id="editStaffModal" tabindex="-1">
     <div class="modal-dialog">
         <div class="modal-content">
@@ -785,7 +821,7 @@ function editStaff(staffId) {
     const cells = row.getElementsByTagName('td');
     
     // Extract data from the table
-    const username = cells[1].textContent.trim().split('\n')[0];
+    const username = cells[1].querySelector('strong').textContent.trim().split('\n')[0];
     const name = cells[0].querySelector('.user-name').textContent.trim();
     const email = cells[0].querySelector('.user-email')?.textContent.trim() || '';
     const level = cells[2].textContent.trim().toLowerCase();

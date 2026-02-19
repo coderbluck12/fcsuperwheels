@@ -298,11 +298,16 @@ $is_admin = (strtolower($display_role) === 'admin');
             </a>
             
             <a href="<?php echo $path_to_root; ?>car_requests.php" class="sidebar-nav-item">
-                <i class="fas fa-car"></i>
+                <i class="fas fa-clipboard"></i>
                 <span>Car Requests</span>
             </a>
             
             <div class="nav-section-title">Receipts</div>
+
+            <a href="<?php echo $path_to_root; ?>invoice_manager.php" class="sidebar-nav-item">
+                <i class="fas fa-file-text"></i>
+                <span>Invoice Manager</span>
+            </a>
             
             <a href="<?php echo $path_to_root; ?>newreceipt.php" class="sidebar-nav-item">
                 <i class="fas fa-plus-circle"></i>

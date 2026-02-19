@@ -1,6 +1,7 @@
 <?php
 include_once('inc/session_manager.php');
 include_once('inc/access_log.php');
+include_once('inc/pagination.php'); // Include the pagination class
 
 // Log page access
 log_access('VIEW_CAR_REQUESTS', 'car_requests.php');
@@ -69,26 +70,61 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_request'])) {
     }
 }
 
-// Fetch car requests
+// --- Fetch Global Stats for Top Cards ---
 try {
-    $sql = "SELECT * FROM car_request WHERE 1=1";
+    $stats_stmt = $pdo->query("SELECT 
+        COUNT(*) as total,
+        SUM(CASE WHEN status = 'pending' OR status IS NULL THEN 1 ELSE 0 END) as pending,
+        SUM(CASE WHEN status = 'contacted' THEN 1 ELSE 0 END) as contacted,
+        SUM(CASE WHEN status = 'quoted' THEN 1 ELSE 0 END) as quoted
+        FROM car_request");
+    $stats = $stats_stmt->fetch(PDO::FETCH_ASSOC);
+} catch (PDOException $e) {
+    $stats = ['total' => 0, 'pending' => 0, 'contacted' => 0, 'quoted' => 0];
+}
+
+// --- Pagination & Fetch Car Requests ---
+try {
+    $where_clause = "WHERE 1=1";
     $params = [];
     
     if (!empty($search)) {
-        $sql .= " AND (name LIKE ? OR email LIKE ? OR phone LIKE ? OR others LIKE ?)";
+        $where_clause .= " AND (name LIKE ? OR email LIKE ? OR phone LIKE ? OR others LIKE ?)";
         $search_param = '%' . $search . '%';
         $params = array_fill(0, 4, $search_param);
     }
     
     if ($status_filter !== 'all') {
-        $sql .= " AND status = ?";
+        $where_clause .= " AND status = ?";
         $params[] = $status_filter;
     }
     
-    $sql .= " ORDER BY time_created DESC";
+    // 1. Get total count of filtered requests
+    $count_stmt = $pdo->prepare("SELECT COUNT(*) FROM car_request " . $where_clause);
+    $count_stmt->execute($params);
+    $total_items = $count_stmt->fetchColumn();
+    
+    // 2. Setup Pagination
+    $items_per_page = 10;
+    $current_page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
+    $pagination = new Pagination($total_items, $items_per_page, $current_page);
+    $offset = $pagination->getOffset();
+    
+    // 3. Fetch paginated data
+    $sql = "SELECT * FROM car_request " . $where_clause . " ORDER BY time_created DESC LIMIT :limit OFFSET :offset";
     
     $stmt = $pdo->prepare($sql);
-    $stmt->execute($params);
+    
+    // Bind all previous params
+    foreach ($params as $key => $value) {
+        $stmt->bindValue($key + 1, $value);
+    }
+    
+    // Bind limit and offset as integers
+    $stmt->bindValue(':limit', (int)$items_per_page, PDO::PARAM_INT);
+    $stmt->bindValue(':offset', (int)$offset, PDO::PARAM_INT);
+    
+    $stmt->execute();
     $requests = $stmt->fetchAll(PDO::FETCH_ASSOC);
     
 } catch (PDOException $e) {
@@ -445,27 +481,25 @@ include 'inc/header.php';
 
     <?php echo $message; ?>
 
-    <!-- Statistics -->
     <div class="stats-grid">
         <div class="stat-card">
-            <div class="stat-value"><?php echo count($requests); ?></div>
+            <div class="stat-value"><?php echo number_format($stats['total']); ?></div>
             <div class="stat-label">Total Requests</div>
         </div>
         <div class="stat-card">
-            <div class="stat-value"><?php echo count(array_filter($requests, fn($r) => ($r['status'] ?? 'pending') === 'pending')); ?></div>
+            <div class="stat-value"><?php echo number_format($stats['pending']); ?></div>
             <div class="stat-label">Pending</div>
         </div>
         <div class="stat-card">
-            <div class="stat-value"><?php echo count(array_filter($requests, fn($r) => ($r['status'] ?? 'pending') === 'contacted')); ?></div>
+            <div class="stat-value"><?php echo number_format($stats['contacted']); ?></div>
             <div class="stat-label">Contacted</div>
         </div>
         <div class="stat-card">
-            <div class="stat-value"><?php echo count(array_filter($requests, fn($r) => ($r['status'] ?? 'pending') === 'quoted')); ?></div>
+            <div class="stat-value"><?php echo number_format($stats['quoted']); ?></div>
             <div class="stat-label">Quoted</div>
         </div>
     </div>
 
-    <!-- Filters -->
     <div class="filters-section">
         <form method="GET" class="filters-row">
             <div class="filter-group">
@@ -495,7 +529,6 @@ include 'inc/header.php';
         </form>
     </div>
 
-    <!-- Requests Table -->
     <div class="requests-table">
         <?php if (empty($requests)): ?>
             <div class="empty-state">
@@ -569,6 +602,22 @@ include 'inc/header.php';
                     </tbody>
                 </table>
             </div>
+            
+            <?php if (isset($pagination) && $pagination->getTotalPages() > 1): ?>
+                <div class="d-flex justify-content-between align-items-center p-4 border-top">
+                    <div class="text-muted" style="font-size: 0.875rem;">
+                        <?php echo $pagination->getPaginationInfo(); ?>
+                    </div>
+                    <div>
+                        <?php 
+                        // Preserve filters when navigating pages
+                        $base_url = "car_requests.php?search=" . urlencode($search) . "&status=" . urlencode($status_filter);
+                        echo $pagination->generatePaginationLinks($base_url); 
+                        ?>
+                    </div>
+                </div>
+            <?php endif; ?>
+            
         <?php endif; ?>
     </div>
 </div>

@@ -77,7 +77,7 @@ if (isset($_GET['edit-fail']))      $comment = '<div class="alert alert-danger">
       <div class="container-lg">
 
         <!-- Breadcrumb + Buttons -->
-        <div class="d-flex flex-wrap align-items-center mb-3">
+        <div class="d-flex flex-wrap align-items-center mb-3" style="margin-top: 80px;">
           <nav aria-label="breadcrumb" class="flex-grow-1">
             <ol class="breadcrumb mb-0">
               <li class="breadcrumb-item"><a href="dashboard.php">Home</a></li>

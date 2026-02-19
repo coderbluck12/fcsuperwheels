@@ -68,7 +68,7 @@ $signatures = $pdo->query("SELECT * FROM signatures ORDER BY created_at DESC")->
 <div class="page-wrapper">
   <?php include_once('inc/header.php'); ?>
   <div class="container mt-4">
-    <h3>Signature Manager</h3>
+    <h3 style="margin-top: 80px; margin-bottom: 10px;">Signature Manager</h3>
     <a href="dashboard.php" class="btn btn-sm btn-primary mb-3">Back to Dashboard</a>
     <?= $comment ?? '' ?>
 

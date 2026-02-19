@@ -3,18 +3,6 @@
 include_once('inc/session_manager.php');
 include_once('inc/functions.php');
 
-// — Basic HTTP auth for master admin
-$valid_username = 'admin';
-$valid_password = 'password123';
-if (!isset($_SERVER['PHP_AUTH_USER'],$_SERVER['PHP_AUTH_PW'])
-  || $_SERVER['PHP_AUTH_USER']!==$valid_username
-  || $_SERVER['PHP_AUTH_PW']!==$valid_password
-) {
-    header('WWW-Authenticate: Basic realm="Protected Page"');
-    header('HTTP/1.0 401 Unauthorized');
-    exit('Unauthorized Access.');
-}
-
 // — Flash messages
 $alerts = [
   'update-success'=>'Invoice visibility changed',
@@ -86,7 +74,7 @@ $invoices = $stmt->fetchAll(PDO::FETCH_ASSOC);
 </head>
 <body>
 <div class="page-wrapper">
-  <?php include_once('inc/menu.php'); ?>
+  <?php include_once('inc/header.php'); ?>
   <div class="page-content--bgf7 watermark">
     <section class="au-breadcrumb2">
       <div class="container watermark">

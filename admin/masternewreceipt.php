@@ -31,7 +31,7 @@ if (!isset($_SERVER['PHP_AUTH_USER'], $_SERVER['PHP_AUTH_PW'])
 </head>
 <body>
 <div class="page-wrapper">
-  <?php include_once('inc/menu.php'); ?>
+  <?php include_once('inc/header.php'); ?>
   <div class="page-content--bgf7 watermark">
     <section class="au-breadcrumb2">
       <div class="container watermark">

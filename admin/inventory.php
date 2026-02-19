@@ -2,59 +2,64 @@
 error_reporting(E_ALL);
 ini_set('display_errors', 1);
 
-// Include session management
+// Include session management and dependencies
 include_once('./inc/session_manager.php');
 include_once('./inc/functions.php');
 include_once('./inc/access_log.php');
+include_once('./inc/pagination.php');
 
 // Log inventory page access
 log_access('VIEW_INVENTORY', 'inventory.php');
 
 $message = '';
 
+// Handle Add Vehicle Form Submission
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_vehicle'])) {
-    $make = validate_input($_POST['make']);
-    $model = validate_input($_POST['model']);
+    $make = $_POST['make'] ?? '';
+    $model = $_POST['model'] ?? '';
     $year = (int)$_POST['year'];
-    $vin = validate_input($_POST['vin']);
-    $color = validate_input($_POST['color']);
-    $purchase_price = (float)$_POST['purchase_price'];
-    $purchase_date = $_POST['purchase_date'];
-    
-    $image_path = '';
-    if (isset($_FILES['image']) && $_FILES['image']['error'] === 0) {
-        $upload_dir = 'uploads/vehicles/';
+    $vin = $_POST['chassis_no'] ?? '';
+    $color = $_POST['color'] ?? '';
+    $purchase_price = (float)$_POST['cost_price']; // New: Cost Price
+    $listing_price = (float)$_POST['listing_price']; // New: Listing Price
+    $purchase_date = $_POST['purchase_date'] ?? date('Y-m-d');
+    $status = 'Available'; // Default status for new vehicles
+    $image_path = null;
+
+    // Handle Image Upload
+    if (isset($_FILES['image']) && $_FILES['image']['error'] === UPLOAD_ERR_OK) {
+        $upload_dir = './uploads/';
+        // Create directory if it doesn't exist
         if (!is_dir($upload_dir)) {
             mkdir($upload_dir, 0777, true);
         }
+        
         $filename = time() . '_' . basename($_FILES['image']['name']);
         $target_file = $upload_dir . $filename;
+        
         if (move_uploaded_file($_FILES['image']['tmp_name'], $target_file)) {
             $image_path = $target_file;
         }
     }
 
     try {
-        $stmt = $pdo->prepare("INSERT INTO vehicles (make, model, year, vin, color, purchase_price, purchase_date, image) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
-        $stmt->execute([$make, $model, $year, $vin, $color, $purchase_price, $purchase_date, $image_path]);
+        $stmt = $pdo->prepare("INSERT INTO vehicles (make, model, year, vin, color, purchase_price, listing_price, purchase_date, image, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+        $stmt->execute([$make, $model, $year, $vin, $color, $purchase_price, $listing_price, $purchase_date, $image_path, $status]);
         log_access('ADD_VEHICLE', 'inventory.php', null, null, "Added $make $model");
-        $message = '<div class="alert alert-success alert-dismissible fade show" role="alert">
-                        <i class="bi bi-check-circle-fill me-2"></i>Vehicle added successfully!
-                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                    </div>';
+        
         // Redirect to prevent form resubmission
         header("Location: inventory.php?success=1");
         exit;
     } catch (PDOException $e) {
         log_access('ADD_VEHICLE_FAILED', 'inventory.php', null, null, "Failed to add vehicle: " . $e->getMessage());
         $message = '<div class="alert alert-danger alert-dismissible fade show" role="alert">
-                        <i class="bi bi-exclamation-triangle-fill me-2"></i>Error adding vehicle: ' . $e->getMessage() . '
+                        <i class="bi bi-exclamation-triangle-fill me-2"></i>Error adding vehicle: ' . htmlspecialchars($e->getMessage()) . '
                         <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
                     </div>';
     }
 }
 
-// Show success message after redirect
+// Show success messages
 if (isset($_GET['success'])) {
     if ($_GET['success'] == 'deleted') {
         $message = '<div class="alert alert-success alert-dismissible fade show" role="alert">
@@ -78,20 +83,49 @@ if (isset($_GET['error'])) {
     ];
     $error_msg = isset($error_messages[$_GET['error']]) ? $error_messages[$_GET['error']] : 'An error occurred.';
     $message = '<div class="alert alert-danger alert-dismissible fade show" role="alert">
-                    <i class="bi bi-exclamation-triangle-fill me-2"></i>' . $error_msg . '
+                    <i class="bi bi-exclamation-triangle-fill me-2"></i>' . htmlspecialchars($error_msg) . '
                     <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
                 </div>';
 }
 
-// Fetch all vehicles
-$stmt = $pdo->query("SELECT * FROM vehicles ORDER BY created_at DESC");
-$vehicles = $stmt->fetchAll();
+// --- Dashboard Statistics ---
+try {
+    $stats_stmt = $pdo->query("
+        SELECT 
+            COUNT(*) as total_vehicles,
+            COALESCE(SUM(purchase_price), 0) as total_value,
+            SUM(CASE WHEN status = 'Available' THEN 1 ELSE 0 END) as available_count,
+            SUM(CASE WHEN status = 'Sold' THEN 1 ELSE 0 END) as sold_count
+        FROM vehicles
+    ");
+    $stats = $stats_stmt->fetch(PDO::FETCH_ASSOC);
+    
+    $total_vehicles = $stats['total_vehicles'] ?? 0;
+    $total_value = $stats['total_value'] ?? 0;
+    $available_count = $stats['available_count'] ?? 0;
+    $sold_count = $stats['sold_count'] ?? 0;
+} catch (PDOException $e) {
+    $total_vehicles = $total_value = $available_count = $sold_count = 0;
+}
 
-// Calculate statistics
-$total_vehicles = count($vehicles);
-$total_value = array_sum(array_column($vehicles, 'purchase_price'));
-$available_count = count(array_filter($vehicles, function($v) { return $v['status'] == 'Available'; }));
-$sold_count = count(array_filter($vehicles, function($v) { return $v['status'] == 'Sold'; }));
+// --- Pagination Setup ---
+$items_per_page = 10;
+$current_page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
+$offset = ($current_page - 1) * $items_per_page;
+
+$pagination = new Pagination($total_vehicles, $items_per_page, $current_page);
+
+// --- Fetch Vehicles for Current Page ---
+try {
+    $stmt = $pdo->prepare("SELECT * FROM vehicles ORDER BY id DESC LIMIT :limit OFFSET :offset");
+    $stmt->bindValue(':limit', (int)$items_per_page, PDO::PARAM_INT);
+    $stmt->bindValue(':offset', (int)$offset, PDO::PARAM_INT);
+    $stmt->execute();
+    $vehicles = $stmt->fetchAll(PDO::FETCH_ASSOC);
+} catch (PDOException $e) {
+    $vehicles = [];
+    $message .= '<div class="alert alert-danger">Error fetching inventory: ' . htmlspecialchars($e->getMessage()) . '</div>';
+}
 
 $path_to_root = './';
 include($path_to_root . 'inc/header.php');
@@ -400,7 +434,6 @@ include($path_to_root . 'inc/header.php');
 </style>
 
 <div class="inventory-container">
-    <!-- Page Header -->
     <div class="page-header">
         <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
             <h1>
@@ -416,13 +449,12 @@ include($path_to_root . 'inc/header.php');
 
     <?php echo $message; ?>
 
-    <!-- Statistics Cards -->
     <div class="stats-grid">
         <div class="stat-card">
             <div class="stat-card-header">
                 <div>
                     <div class="stat-label">Total Vehicles</div>
-                    <h2 class="stat-value"><?php echo $total_vehicles; ?></h2>
+                    <h2 class="stat-value"><?php echo number_format($total_vehicles); ?></h2>
                 </div>
                 <div class="stat-icon primary">
                     <i class="bi bi-car-front"></i>
@@ -446,7 +478,7 @@ include($path_to_root . 'inc/header.php');
             <div class="stat-card-header">
                 <div>
                     <div class="stat-label">Available</div>
-                    <h2 class="stat-value"><?php echo $available_count; ?></h2>
+                    <h2 class="stat-value"><?php echo number_format($available_count); ?></h2>
                 </div>
                 <div class="stat-icon warning">
                     <i class="bi bi-check-circle"></i>
@@ -458,7 +490,7 @@ include($path_to_root . 'inc/header.php');
             <div class="stat-card-header">
                 <div>
                     <div class="stat-label">Sold</div>
-                    <h2 class="stat-value"><?php echo $sold_count; ?></h2>
+                    <h2 class="stat-value"><?php echo number_format($sold_count); ?></h2>
                 </div>
                 <div class="stat-icon danger">
                     <i class="bi bi-graph-up"></i>
@@ -467,12 +499,11 @@ include($path_to_root . 'inc/header.php');
         </div>
     </div>
 
-    <!-- Vehicles Table -->
     <div class="content-card">
         <div class="content-card-header">
             <h2 class="content-card-title">All Vehicles</h2>
             <div style="color: var(--gray-600); font-size: 0.875rem;">
-                <i class="bi bi-funnel"></i> Showing <?php echo count($vehicles); ?> vehicles
+                <i class="bi bi-funnel"></i> Showing <?php echo count($vehicles); ?> vehicles on this page
             </div>
         </div>
         
@@ -484,10 +515,10 @@ include($path_to_root . 'inc/header.php');
                         <th>ID</th>
                         <th>Image</th>
                         <th>Vehicle</th>
-                        <th>VIN</th>
+                        <th>Chassis No</th>
                         <th>Color</th>
                         <th>Status</th>
-                        <th>Purchase Price</th>
+                        <th>Listing Price</th>
                         <th>Purchase Date</th>
                         <th>Actions</th>
                     </tr>
@@ -499,30 +530,30 @@ include($path_to_root . 'inc/header.php');
                         <td>
                             <div class="vehicle-image-wrapper">
                                 <?php if ($vehicle['image']): ?>
-                                    <img src="<?php echo $vehicle['image']; ?>" alt="Vehicle">
+                                    <img src="<?php echo htmlspecialchars($vehicle['image']); ?>" alt="Vehicle">
                                 <?php else: ?>
                                     <i class="bi bi-image" style="color: var(--gray-400); font-size: 1.5rem;"></i>
                                 <?php endif; ?>
                             </div>
                         </td>
                         <td>
-                            <div style="font-weight: 600; color: var(--gray-900);"><?php echo $vehicle['make'] . ' ' . $vehicle['model']; ?></div>
-                            <div style="color: var(--gray-600); font-size: 0.875rem;"><?php echo $vehicle['year']; ?></div>
+                            <div style="font-weight: 600; color: var(--gray-900);"><?php echo htmlspecialchars($vehicle['make'] . ' ' . $vehicle['model']); ?></div>
+                            <div style="color: var(--gray-600); font-size: 0.875rem;"><?php echo htmlspecialchars($vehicle['year']); ?></div>
                         </td>
                         <td>
                             <code style="font-size: 0.75rem; background: var(--gray-100); padding: 0.25rem 0.5rem; border-radius: 4px;">
-                                <?php echo $vehicle['vin'] ?: 'N/A'; ?>
+                                <?php echo htmlspecialchars($vehicle['vin']) ?: 'N/A'; ?>
                             </code>
                         </td>
-                        <td><?php echo $vehicle['color'] ?: '-'; ?></td>
+                        <td><?php echo htmlspecialchars($vehicle['color']) ?: '-'; ?></td>
                         <td>
                             <span class="status-badge status-<?php echo strtolower($vehicle['status']); ?>">
-                                <?php echo $vehicle['status']; ?>
+                                <?php echo htmlspecialchars($vehicle['status']); ?>
                             </span>
                         </td>
                         <td>
                             <span style="font-weight: 600; color: var(--gray-900);">
-                                ₦<?php echo number_format($vehicle['purchase_price'], 2); ?>
+                                ₦<?php echo number_format($vehicle['listing_price'], 2); ?>
                             </span>
                         </td>
                         <td>
@@ -538,7 +569,7 @@ include($path_to_root . 'inc/header.php');
                                 <a href="edit_vehicle.php?id=<?php echo $vehicle['id']; ?>" class="btn-action btn-action-edit">
                                     <i class="bi bi-pencil"></i> Edit
                                 </a>
-                                <button onclick="confirmDelete(<?php echo $vehicle['id']; ?>, '<?php echo addslashes($vehicle['make'] . ' ' . $vehicle['model']); ?>')" class="btn-action btn-action-delete">
+                                <button onclick="confirmDelete(<?php echo $vehicle['id']; ?>, '<?php echo addslashes(htmlspecialchars($vehicle['make'] . ' ' . $vehicle['model'])); ?>')" class="btn-action btn-action-delete">
                                     <i class="bi bi-trash"></i> Delete
                                 </button>
                             </div>
@@ -547,20 +578,27 @@ include($path_to_root . 'inc/header.php');
                     <?php endforeach; ?>
                 </tbody>
             </table>
-            <?php else: ?>
-            <div style="text-align: center; padding: 4rem 2rem; color: var(--gray-500);">
-                <div style="font-size: 4rem; margin-bottom: 1rem; opacity: 0.5;">
-                    <i class="bi bi-car-front"></i>
+            
+            <?php if (isset($pagination) && $pagination->getTotalPages() > 1): ?>
+                <div class="d-flex justify-content-between align-items-center p-4">
+                    <div class="text-muted" style="font-size: 0.875rem;">
+                        <?php echo $pagination->getPaginationInfo(); ?>
+                    </div>
+                    <?php echo $pagination->generatePaginationLinks('inventory.php'); ?>
                 </div>
-                <h3 style="color: var(--gray-700); font-weight: 600; margin-bottom: 0.5rem;">No vehicles in inventory</h3>
-                <p style="color: var(--gray-500);">Get started by adding your first vehicle to the inventory.</p>
-            </div>
+            <?php endif; ?>
+            
+            <?php else: ?>
+                <div class="p-5 text-center text-muted">
+                    <i class="bi bi-car-front" style="font-size: 3rem; opacity: 0.5;"></i>
+                    <h4 class="mt-3">No vehicles found</h4>
+                    <p>Click "Add Vehicle" to start building your inventory.</p>
+                </div>
             <?php endif; ?>
         </div>
     </div>
 </div>
 
-<!-- Add Vehicle Modal -->
 <div class="modal fade" id="addVehicleModal" tabindex="-1">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
@@ -593,17 +631,17 @@ include($path_to_root . 'inc/header.php');
                         </div>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label"><i class="bi bi-upc me-1"></i> VIN</label>
-                        <input type="text" name="vin" class="form-control" maxlength="17">
+                        <label class="form-label"><i class="bi bi-upc me-1"></i>Chassis No</label>
+                        <input type="text" name="chassis_no" class="form-control" maxlength="17">
                     </div>
                     <div class="row">
                         <div class="col-md-6 mb-3">
-                            <label class="form-label"><i class="bi bi-currency-dollar me-1"></i> Purchase Price *</label>
-                            <input type="number" step="0.01" name="purchase_price" class="form-control" required>
+                            <label class="form-label"><i class="bi bi-currency-dollar me-1"></i>Cost Price *</label>
+                            <input type="number" step="0.01" name="cost_price" class="form-control" required>
                         </div>
                         <div class="col-md-6 mb-3">
-                            <label class="form-label"><i class="bi bi-calendar-event me-1"></i> Purchase Date</label>
-                            <input type="date" name="purchase_date" class="form-control" value="<?php echo date('Y-m-d'); ?>">
+                            <label class="form-label"><i class="bi bi-tag me-1"></i>Listing Price *</label>
+                            <input type="number" step="0.01" name="listing_price" class="form-control" required>
                         </div>
                     </div>
                     <div class="mb-3">
@@ -622,7 +660,6 @@ include($path_to_root . 'inc/header.php');
     </div>
 </div>
 
-<!-- Delete Confirmation Modal -->
 <div class="modal fade" id="deleteConfirmModal" tabindex="-1">
     <div class="modal-dialog">
         <div class="modal-content">
@@ -649,7 +686,7 @@ include($path_to_root . 'inc/header.php');
 </div>
 
 <script>
-// Initialize Bootstrap modal
+// Initialize Bootstrap modal for adding a vehicle
 function openAddVehicleModal() {
     const modalElement = document.getElementById('addVehicleModal');
     if (modalElement) {
@@ -658,7 +695,7 @@ function openAddVehicleModal() {
     }
 }
 
-// Confirm delete function
+// Pass dynamic data to the delete confirmation modal
 function confirmDelete(vehicleId, vehicleName) {
     const modalElement = document.getElementById('deleteConfirmModal');
     const vehicleNameElement = document.getElementById('vehicleNameToDelete');

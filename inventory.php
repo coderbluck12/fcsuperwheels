@@ -510,7 +510,7 @@ foreach($vehicles as $v) {
                                    <?php if ($vehicle['vin']): ?>
                                    <div class="spec-item">
                                        <i class="fa fa-barcode"></i>
-                                       VIN: <?php echo htmlspecialchars(substr($vehicle['vin'], 0, 8)); ?>...
+                                       Chassis: <?php echo htmlspecialchars(substr($vehicle['vin'], 0, 8)); ?>...
                                    </div>
                                    <?php endif; ?>
                                </div>

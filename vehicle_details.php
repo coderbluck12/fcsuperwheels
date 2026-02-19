@@ -379,8 +379,8 @@ try {
             font-size: 0.875rem;
         }
         .sidebar-logo img {
-            width: 50px;
-            height: 50px;
+            width: 100px;
+            height: 100px;
             object-fit: contain;
             image-rendering: -webkit-optimize-contrast;
             image-rendering: crisp-edges;
@@ -461,7 +461,7 @@ try {
                                         <i class="bi bi-speedometer2"></i>
                                     </div>
                                     <div class="detail-content">
-                                        <div class="detail-label">VIN Number</div>
+                                        <div class="detail-label">Chassis Number</div>
                                         <div class="detail-value"><?php echo $vehicle['vin'] ?: 'Not Available'; ?></div>
                                     </div>
                                 </div>

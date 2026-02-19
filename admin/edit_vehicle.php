@@ -26,13 +26,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_vehicle'])) {
     $color = validate_input($_POST['color']);
     $status = validate_input($_POST['status']);
     $purchase_price = (float)$_POST['purchase_price'];
+    $listing_price = (float)$_POST['listing_price'];
     $sale_price = !empty($_POST['sale_price']) ? (float)$_POST['sale_price'] : null;
     $purchase_date = $_POST['purchase_date'];
     $sale_date = !empty($_POST['sale_date']) ? $_POST['sale_date'] : null;
 
     try {
-        $stmt = $pdo->prepare("UPDATE vehicles SET make = ?, model = ?, year = ?, vin = ?, color = ?, status = ?, purchase_price = ?, sale_price = ?, purchase_date = ?, sale_date = ? WHERE id = ?");
-        $stmt->execute([$make, $model, $year, $vin, $color, $status, $purchase_price, $sale_price, $purchase_date, $sale_date, $id]);
+        $stmt = $pdo->prepare("UPDATE vehicles SET make = ?, model = ?, year = ?, vin = ?, color = ?, status = ?, purchase_price = ?, listing_price = ?, sale_price = ?, purchase_date = ?, sale_date = ? WHERE id = ?");
+        $stmt->execute([$make, $model, $year, $vin, $color, $status, $purchase_price, $listing_price, $sale_price, $purchase_date, $sale_date, $id]);
         $message = '<div class="alert alert-success alert-dismissible fade show">Vehicle updated successfully! <button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>';
         
         // Refresh vehicle data
@@ -219,8 +220,12 @@ include 'inc/header.php';
                     </select>
                 </div>
                 <div class="col-md-4 mb-3">
-                    <label class="form-label">Purchase Price *</label>
+                    <label class="form-label">Cost Price *</label>
                     <input type="number" step="0.01" name="purchase_price" class="form-control" value="<?php echo $vehicle['purchase_price']; ?>" required>
+                </div>
+                <div class="col-md-4 mb-3">
+                    <label class="form-label">Listing Price *</label>
+                    <input type="number" step="0.01" name="listing_price" class="form-control" value="<?php echo $vehicle['listing_price']; ?>" required>
                 </div>
                 <div class="col-md-4 mb-3">
                     <label class="form-label">Sale Price</label>
