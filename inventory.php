@@ -515,8 +515,8 @@ foreach($vehicles as $v) {
                                    <?php endif; ?>
                                </div>
                                
-                               <?php if ($vehicle['sale_price']): ?>
-                                   <div class="vehicle-price">₦<?php echo number_format($vehicle['sale_price'], 2); ?></div>
+                               <?php if ($vehicle['listing_price']): ?>
+                                   <div class="vehicle-price">₦<?php echo number_format($vehicle['listing_price'], 2); ?></div>
                                <?php elseif ($vehicle['purchase_price']): ?>
                                    <div class="vehicle-price">₦<?php echo number_format($vehicle['purchase_price'], 2); ?></div>
                                <?php endif; ?>

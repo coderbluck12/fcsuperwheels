@@ -93,7 +93,7 @@ try {
     $stats_stmt = $pdo->query("
         SELECT 
             COUNT(*) as total_vehicles,
-            COALESCE(SUM(purchase_price), 0) as total_value,
+            COALESCE(SUM(listing_price), 0) as total_value,
             SUM(CASE WHEN status = 'Available' THEN 1 ELSE 0 END) as available_count,
             SUM(CASE WHEN status = 'Sold' THEN 1 ELSE 0 END) as sold_count
         FROM vehicles

@@ -9,7 +9,6 @@ if (file_exists('admin/inc/functions.php')) {
 } elseif (file_exists('inc/functions.php')) {
     require_once('inc/functions.php');
 } else {
-    // Fallback: Manual Connection if file not found
     try {
         $db_host = 'localhost';
         $db_user = 'tertgxyp_seyi';
@@ -30,7 +29,6 @@ try {
     $stmt = $pdo->prepare("SELECT * FROM vehicles WHERE id = ?");
     $stmt->execute([$vehicle_id]);
     $vehicle = $stmt->fetch(PDO::FETCH_ASSOC);
-    
     if (!$vehicle) {
         header("Location: index.php");
         exit;
@@ -38,533 +36,803 @@ try {
 } catch (Exception $e) {
     die("Error fetching vehicle: " . $e->getMessage());
 }
+
+// Determine display price: listing_price preferred, fallback to purchase_price
+$display_price = !empty($vehicle['listing_price']) ? $vehicle['listing_price'] : ($vehicle['purchase_price'] ?? 0);
 ?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><?php echo $vehicle['year'] . ' ' . $vehicle['make'] . ' ' . $vehicle['model']; ?> | Firstchoice Superwheels</title>
-    
+    <title><?php echo htmlspecialchars($vehicle['year'] . ' ' . $vehicle['make'] . ' ' . $vehicle['model']); ?> | Firstchoice Superwheels</title>
+    <meta name="description" content="<?php echo htmlspecialchars($vehicle['year'] . ' ' . $vehicle['make'] . ' ' . $vehicle['model'] . ' available at Firstchoice Superwheels.'); ?>">
+
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
-    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
     <style>
         :root {
-            --primary-color: #2563eb;
-            --primary-dark: #1d4ed8;
-            --primary-light: #3b82f6;
-            --success-color: #10b981;
-            --danger-color: #ef4444;
+            --primary: #1e3c72;
+            --primary-mid: #2a5298;
+            --primary-light: #4a6fa5;
+            --accent: #f59e0b;
+            --success: #059669;
+            --danger: #dc2626;
             --gray-50: #f9fafb;
             --gray-100: #f3f4f6;
             --gray-200: #e5e7eb;
             --gray-300: #d1d5db;
+            --gray-500: #6b7280;
             --gray-600: #4b5563;
             --gray-700: #374151;
-            --gray-800: #1f2937;
             --gray-900: #111827;
         }
 
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
 
-        body { 
-            background-color: var(--gray-50);
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        body {
+            background: var(--gray-50);
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
             min-height: 100vh;
             display: flex;
             flex-direction: column;
+            color: var(--gray-700);
         }
 
-        /* Navigation */
-        .navbar {
-            background-color: white !important;
-            border-bottom: 2px solid var(--primary-color);
-            padding: 1rem 0;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+        /* ── Navbar ── */
+        .site-nav {
+            background: white;
+            border-bottom: 3px solid var(--primary);
+            padding: 0.75rem 0;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.07);
         }
 
-        .navbar-brand {
-            font-weight: 700;
-            font-size: 1.5rem;
-            letter-spacing: -0.025em;
-            color: var(--gray-900) !important;
+        .site-nav .container {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
         }
 
-        .navbar-brand i {
-            color: var(--primary-color);
+        .nav-logo img {
+            height: 52px;
+            width: auto;
+            object-fit: contain;
         }
 
-        .back-btn {
+        .nav-links { display: flex; align-items: center; gap: 1.5rem; }
+
+        .nav-link-item {
             color: var(--gray-600);
             text-decoration: none;
             font-size: 0.875rem;
             font-weight: 500;
-            display: inline-flex;
-            align-items: center;
-            gap: 0.5rem;
             transition: color 0.2s;
         }
+        .nav-link-item:hover { color: var(--primary); }
 
-        .back-btn:hover {
-            color: var(--primary-color);
-        }
-
-        /* Main Content */
-        .vehicle-details-section {
-            padding: 3rem 0;
-            flex: 1;
-        }
-
-        .detail-card {
-            background: white;
-            border-radius: 12px;
-            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-            overflow: hidden;
-        }
-
-        /* Image Section */
-        .vehicle-image-section {
-            background-color: var(--gray-100);
-            height: 500px;
-            display: flex;
+        .btn-nav-back {
+            display: inline-flex;
             align-items: center;
-            justify-content: center;
-            position: relative;
+            gap: 0.375rem;
+            background: var(--gray-100);
+            color: var(--gray-700);
+            border: 1.5px solid var(--gray-200);
+            padding: 0.5rem 1rem;
+            border-radius: 7px;
+            font-size: 0.875rem;
+            font-weight: 600;
+            text-decoration: none;
+            transition: all 0.2s;
+        }
+        .btn-nav-back:hover {
+            background: var(--primary);
+            border-color: var(--primary);
+            color: white;
         }
 
-        .vehicle-detail-img {
+        /* ── Breadcrumb ── */
+        .breadcrumb-bar {
+            background: white;
+            border-bottom: 1px solid var(--gray-200);
+            padding: 0.625rem 0;
+        }
+
+        .breadcrumb-bar .breadcrumb {
+            margin: 0;
+            font-size: 0.8125rem;
+        }
+
+        .breadcrumb-bar .breadcrumb-item a {
+            color: var(--primary-mid);
+            text-decoration: none;
+        }
+
+        .breadcrumb-bar .breadcrumb-item.active { color: var(--gray-500); }
+
+        /* ── Page Layout ── */
+        .vehicle-page { padding: 2.5rem 0; flex: 1; }
+
+        /* ── Image Hero ── */
+        .image-hero {
+            position: relative;
+            border-radius: 14px;
+            overflow: hidden;
+            background: var(--gray-100);
+            aspect-ratio: 16/10;
+            box-shadow: 0 4px 24px rgba(0,0,0,0.10);
+        }
+
+        .image-hero img {
             width: 100%;
             height: 100%;
             object-fit: cover;
+            display: block;
+            transition: transform 0.4s ease;
         }
 
-        .vehicle-img-placeholder {
-            font-size: 8rem;
-            color: var(--gray-400);
-        }
+        .image-hero:hover img { transform: scale(1.02); }
 
-        .status-badge {
-            position: absolute;
-            top: 20px;
-            right: 20px;
-            font-size: 0.875rem;
-            text-transform: uppercase;
-            font-weight: 600;
-            padding: 0.5rem 1.25rem;
-            border-radius: 25px;
-            letter-spacing: 0.025em;
-            backdrop-filter: blur(10px);
-        }
-
-        .status-available {
-            background-color: rgba(209, 250, 229, 0.95);
-            color: #065f46;
-            border: 1px solid #10b981;
-        }
-
-        .status-sold {
-            background-color: rgba(254, 226, 226, 0.95);
-            color: #991b1b;
-            border: 1px solid #ef4444;
-        }
-
-        .status-pending {
-            background-color: rgba(254, 243, 199, 0.95);
-            color: #92400e;
-            border: 1px solid #f59e0b;
-        }
-
-        /* Info Section */
-        .vehicle-info-section {
-            padding: 2rem;
-        }
-
-        .vehicle-title-section {
-            border-bottom: 2px solid var(--gray-200);
-            padding-bottom: 1.5rem;
-            margin-bottom: 2rem;
-        }
-
-        .vehicle-main-title {
-            font-size: 2.25rem;
-            font-weight: 700;
-            color: var(--gray-900);
-            margin-bottom: 0.5rem;
-        }
-
-        .vehicle-subtitle {
-            font-size: 1.25rem;
-            color: var(--gray-600);
-            margin-bottom: 1rem;
-        }
-
-        .price-section {
+        .image-placeholder {
+            width: 100%;
+            height: 100%;
             display: flex;
-            align-items: center;
-            gap: 1rem;
-            margin-top: 1rem;
-        }
-
-        .price-label {
-            font-size: 0.875rem;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-            color: var(--gray-600);
-        }
-
-        .price-value {
-            font-size: 2rem;
-            font-weight: 700;
-            color: var(--primary-color);
-        }
-
-        /* Details Grid */
-        .details-grid {
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 1.5rem;
-            margin-bottom: 2rem;
-        }
-
-        @media (max-width: 768px) {
-            .details-grid {
-                grid-template-columns: 1fr;
-            }
-        }
-
-        .detail-row {
-            display: flex;
-            align-items: flex-start;
-            gap: 1rem;
-            padding: 1rem;
-            background-color: var(--gray-50);
-            border-radius: 8px;
-            border: 1px solid var(--gray-200);
-        }
-
-        .detail-icon {
-            width: 40px;
-            height: 40px;
-            background-color: var(--primary-color);
-            color: white;
-            border-radius: 8px;
-            display: flex;
+            flex-direction: column;
             align-items: center;
             justify-content: center;
-            font-size: 1.125rem;
+            color: var(--gray-300);
+            font-size: 5rem;
+            min-height: 300px;
+        }
+
+        .image-placeholder p {
+            font-size: 0.9rem;
+            color: var(--gray-500);
+            margin-top: 0.75rem;
+            font-size: 0.875rem;
+        }
+
+        /* Status floating badge */
+        .status-pill {
+            position: absolute;
+            top: 16px;
+            right: 16px;
+            padding: 0.375rem 1rem;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            backdrop-filter: blur(8px);
+        }
+
+        .pill-available { background: rgba(209,250,229,0.95); color: #065f46; border: 1.5px solid #10b981; }
+        .pill-sold      { background: rgba(254,226,226,0.95); color: #991b1b; border: 1.5px solid #ef4444; }
+        .pill-reserved  { background: rgba(254,243,199,0.95); color: #92400e; border: 1.5px solid #f59e0b; }
+
+        /* Thumbnail strip (shows same image repeated for demo feel) */
+        .thumb-strip {
+            display: flex;
+            gap: 0.625rem;
+            margin-top: 0.875rem;
+        }
+
+        .thumb-item {
+            width: 72px;
+            height: 52px;
+            border-radius: 7px;
+            overflow: hidden;
+            border: 2px solid transparent;
+            cursor: pointer;
+            transition: border-color 0.2s;
             flex-shrink: 0;
         }
 
-        .detail-content {
-            flex: 1;
+        .thumb-item.active { border-color: var(--primary); }
+        .thumb-item img { width: 100%; height: 100%; object-fit: cover; }
+
+        /* ── Info Panel ── */
+        .info-panel { padding-left: 1.5rem; }
+
+        .vehicle-make-model {
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: var(--primary-mid);
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            margin-bottom: 0.375rem;
         }
 
-        .detail-label {
+        .vehicle-heading {
+            font-size: 2.125rem;
+            font-weight: 800;
+            color: var(--gray-900);
+            line-height: 1.15;
+            margin-bottom: 0.75rem;
+        }
+
+        /* Price card */
+        .price-card {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-mid) 100%);
+            border-radius: 12px;
+            padding: 1.25rem 1.5rem;
+            margin-bottom: 1.5rem;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .price-label-text {
             font-size: 0.75rem;
+            font-weight: 600;
             text-transform: uppercase;
-            letter-spacing: 0.05em;
-            color: var(--gray-600);
+            letter-spacing: 0.08em;
+            opacity: 0.8;
             margin-bottom: 0.25rem;
         }
 
-        .detail-value {
-            font-size: 1rem;
-            font-weight: 600;
-            color: var(--gray-900);
+        .price-amount {
+            font-size: 2.25rem;
+            font-weight: 800;
+            color: white;
+            line-height: 1;
         }
 
-        /* Additional Info Section */
-        .additional-info {
-            background-color: var(--gray-50);
-            padding: 1.5rem;
+        .price-icon {
+            width: 52px;
+            height: 52px;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.15);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+        }
+
+        /* Specs grid */
+        .specs-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.75rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .spec-tile {
+            background: white;
+            border: 1.5px solid var(--gray-200);
+            border-radius: 10px;
+            padding: 0.875rem 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+
+        .spec-tile:hover {
+            border-color: var(--primary-light);
+            box-shadow: 0 2px 8px rgba(30,60,114,0.08);
+        }
+
+        .spec-icon {
+            width: 38px;
+            height: 38px;
             border-radius: 8px;
-            border: 1px solid var(--gray-200);
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-mid) 100%);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1rem;
+            flex-shrink: 0;
         }
 
-        .info-title {
-            font-size: 1.125rem;
-            font-weight: 600;
+        .spec-label {
+            font-size: 0.7rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--gray-500);
+            margin-bottom: 0.1rem;
+        }
+
+        .spec-value {
+            font-size: 0.9375rem;
+            font-weight: 700;
             color: var(--gray-900);
-            margin-bottom: 1rem;
+            line-height: 1.2;
         }
 
-        .info-item {
+        /* CTA buttons */
+        .cta-group {
+            display: flex;
+            gap: 0.75rem;
+            flex-wrap: wrap;
+            margin-bottom: 1.5rem;
+        }
+
+        .btn-cta-primary {
+            flex: 1;
+            min-width: 140px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-mid) 100%);
+            color: white;
+            border: none;
+            padding: 0.875rem 1.5rem;
+            border-radius: 9px;
+            font-size: 0.9375rem;
+            font-weight: 700;
+            text-decoration: none;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-cta-primary:hover {
+            filter: brightness(1.12);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(30,60,114,0.3);
+            color: white;
+        }
+
+        .btn-cta-secondary {
+            flex: 1;
+            min-width: 140px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            background: white;
+            color: var(--primary);
+            border: 2px solid var(--primary);
+            padding: 0.875rem 1.5rem;
+            border-radius: 9px;
+            font-size: 0.9375rem;
+            font-weight: 700;
+            text-decoration: none;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-cta-secondary:hover {
+            background: var(--primary);
+            color: white;
+            transform: translateY(-2px);
+        }
+
+        /* Trust chips */
+        .trust-chips {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
+
+        .trust-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.3rem;
+            background: var(--gray-100);
+            color: var(--gray-600);
+            padding: 0.35rem 0.75rem;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+
+        .trust-chip i { color: var(--success); }
+
+        /* ── Sidebar Card ── */
+        .sidebar-card {
+            background: white;
+            border: 1px solid var(--gray-200);
+            border-radius: 14px;
+            overflow: hidden;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+            position: sticky;
+            top: 100px;
+        }
+
+        .sidebar-card-header {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-mid) 100%);
+            color: white;
+            padding: 1.25rem 1.5rem;
+        }
+
+        .sidebar-card-header h3 {
+            font-size: 1rem;
+            font-weight: 700;
+            margin: 0;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .info-list { padding: 0 1.5rem; }
+
+        .info-row {
             display: flex;
             justify-content: space-between;
-            padding: 0.75rem 0;
-            border-bottom: 1px solid var(--gray-200);
-        }
-
-        .info-item:last-child {
-            border-bottom: none;
-        }
-
-        .info-label {
-            color: var(--gray-600);
-            font-size: 0.9375rem;
-        }
-
-        .info-value {
-            color: var(--gray-900);
-            font-weight: 500;
-            font-size: 0.9375rem;
-        }
-
-        /* Action Buttons */
-        .action-section {
-            margin-top: 2rem;
-            padding-top: 2rem;
-            border-top: 2px solid var(--gray-200);
-            display: flex;
+            align-items: center;
+            padding: 0.875rem 0;
+            border-bottom: 1px solid var(--gray-100);
             gap: 1rem;
         }
 
-        .btn-primary-action {
-            background-color: var(--primary-color);
-            color: white;
-            border: none;
-            padding: 0.875rem 2rem;
-            border-radius: 8px;
-            font-size: 1rem;
+        .info-row:last-child { border-bottom: none; }
+
+        .info-row-label {
+            font-size: 0.8125rem;
+            color: var(--gray-500);
+            font-weight: 500;
+        }
+
+        .info-row-value {
+            font-size: 0.875rem;
+            color: var(--gray-900);
             font-weight: 600;
-            cursor: pointer;
-            transition: all 0.2s;
+            text-align: right;
+        }
+
+        /* Status badge inline */
+        .status-inline {
             display: inline-flex;
             align-items: center;
-            gap: 0.5rem;
+            gap: 0.3rem;
+            padding: 0.25rem 0.625rem;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            font-weight: 700;
         }
 
-        .btn-primary-action:hover {
-            background-color: var(--primary-dark);
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+        .status-inline-available { background: #d1fae5; color: #065f46; }
+        .status-inline-sold      { background: #fee2e2; color: #991b1b; }
+        .status-inline-reserved  { background: #fef3c7; color: #92400e; }
+
+        /* Contact box inside sidebar */
+        .contact-box {
+            background: var(--gray-50);
+            border-top: 1px solid var(--gray-200);
+            padding: 1.25rem 1.5rem;
         }
 
-        .btn-secondary-action {
-            background-color: white;
-            color: var(--gray-700);
-            border: 2px solid var(--gray-300);
-            padding: 0.875rem 2rem;
-            border-radius: 8px;
-            font-size: 1rem;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.2s;
-            display: inline-flex;
-            align-items: center;
-            gap: 0.5rem;
-        }
-
-        .btn-secondary-action:hover {
-            border-color: var(--primary-color);
-            color: var(--primary-color);
-        }
-
-        /* Footer */
-        footer {
-            background-color: var(--gray-100);
+        .contact-box p {
+            font-size: 0.8125rem;
             color: var(--gray-600);
+            margin-bottom: 0.875rem;
+            line-height: 1.5;
+        }
+
+        .contact-phone {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 1.0625rem;
+            font-weight: 700;
+            color: var(--primary);
+            text-decoration: none;
+            margin-bottom: 0.5rem;
+        }
+
+        .contact-phone:hover { color: var(--primary-mid); }
+
+        /* ── Sold overlay note ── */
+        .sold-banner {
+            background: linear-gradient(90deg, #fee2e2 0%, #fef2f2 100%);
+            border: 1.5px solid #fca5a5;
+            border-radius: 10px;
+            padding: 1rem 1.25rem;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            margin-bottom: 1.5rem;
+            font-size: 0.9rem;
+            color: #991b1b;
+            font-weight: 600;
+        }
+
+        /* ── Footer ── */
+        footer {
+            background: var(--primary);
+            color: rgba(255,255,255,0.75);
             padding: 2rem 0;
             margin-top: auto;
-            border-top: 1px solid var(--gray-200);
         }
 
-        footer p {
-            margin: 0;
-            font-size: 0.875rem;
+        footer p { font-size: 0.875rem; margin: 0; }
+        footer a { color: rgba(255,255,255,0.9); text-decoration: none; }
+        footer a:hover { color: white; }
+
+        /* ── Responsive ── */
+        @media (max-width: 992px) {
+            .info-panel { padding-left: 0; margin-top: 1.5rem; }
+            .vehicle-heading { font-size: 1.75rem; }
+            .sidebar-card { position: static; margin-top: 1.5rem; }
         }
-        .sidebar-logo img {
-            width: 100px;
-            height: 100px;
-            object-fit: contain;
-            image-rendering: -webkit-optimize-contrast;
-            image-rendering: crisp-edges;
+
+        @media (max-width: 576px) {
+            .vehicle-page { padding: 1.5rem 0; }
+            .specs-grid { grid-template-columns: 1fr 1fr; }
+            .price-amount { font-size: 1.75rem; }
+            .cta-group { flex-direction: column; }
+            .btn-cta-primary, .btn-cta-secondary { min-width: 100%; flex: none; }
         }
     </style>
 </head>
 <body>
 
     <!-- Navigation -->
-    <nav class="navbar navbar-expand-lg">
+    <nav class="site-nav">
         <div class="container">
-            <a class="sidebar-logo" href="index.php">
-                <img src="./images/logo.png" alt="FC Superwheels" />
+            <a class="nav-logo" href="index.php">
+                <img src="./images/logo.png" alt="Firstchoice Superwheels">
             </a>
-            <div class="ms-auto">
-                <a href="inventory.php" class="back-btn">
-                    <i class="bi bi-arrow-left"></i>
-                    Back to Inventory
+            <div class="nav-links">
+                <a href="index.php" class="nav-link-item">Home</a>
+                <a href="inventory.php" class="nav-link-item">Inventory</a>
+                <a href="inventory.php" class="btn-nav-back">
+                    <i class="bi bi-arrow-left"></i> Back to Inventory
                 </a>
             </div>
         </div>
     </nav>
 
-    <!-- Vehicle Details Section -->
-    <div class="vehicle-details-section">
+    <!-- Breadcrumb -->
+    <div class="breadcrumb-bar">
         <div class="container">
-            <div class="row">
-                <div class="col-lg-8 mb-4">
-                    <div class="detail-card">
-                        <!-- Vehicle Image -->
-                        <div class="vehicle-image-section">
-                            <?php if (!empty($vehicle['image'])): ?>
-                                <img src="<?php echo (file_exists('admin/'.$vehicle['image']) ? 'admin/' : '') . $vehicle['image']; ?>" class="vehicle-detail-img" alt="Vehicle">
-                            <?php else: ?>
-                                <i class="bi bi-car-front vehicle-img-placeholder"></i>
-                            <?php endif; ?>
-                            
-                            <?php 
-                                $statusClass = 'status-available';
-                                if ($vehicle['status'] == 'Sold') $statusClass = 'status-sold';
-                                elseif ($vehicle['status'] == 'Pending') $statusClass = 'status-pending';
-                            ?>
-                            <div class="status-badge <?php echo $statusClass; ?>">
-                                <?php echo $vehicle['status']; ?>
-                            </div>
-                        </div>
-
-                        <!-- Vehicle Info -->
-                        <div class="vehicle-info-section">
-                            <div class="vehicle-title-section">
-                                <h1 class="vehicle-main-title">
-                                    <?php echo $vehicle['year'] . ' ' . $vehicle['make']; ?>
-                                </h1>
-                                <p class="vehicle-subtitle"><?php echo $vehicle['model']; ?></p>
-                                
-                                <div class="price-section">
-                                    <div>
-                                        <span class="price-label">Purchase Price</span>
-                                        <div class="price-value">₦<?php echo number_format($vehicle['purchase_price'], 2); ?></div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <!-- Vehicle Details Grid -->
-                            <div class="details-grid">
-                                <div class="detail-row">
-                                    <div class="detail-icon">
-                                        <i class="bi bi-palette-fill"></i>
-                                    </div>
-                                    <div class="detail-content">
-                                        <div class="detail-label">Color</div>
-                                        <div class="detail-value"><?php echo $vehicle['color'] ?: 'Not Specified'; ?></div>
-                                    </div>
-                                </div>
-
-                                <div class="detail-row">
-                                    <div class="detail-icon">
-                                        <i class="bi bi-speedometer2"></i>
-                                    </div>
-                                    <div class="detail-content">
-                                        <div class="detail-label">Chassis Number</div>
-                                        <div class="detail-value"><?php echo $vehicle['vin'] ?: 'Not Available'; ?></div>
-                                    </div>
-                                </div>
-
-                                <div class="detail-row">
-                                    <div class="detail-icon">
-                                        <i class="bi bi-calendar-check"></i>
-                                    </div>
-                                    <div class="detail-content">
-                                        <div class="detail-label">Year</div>
-                                        <div class="detail-value"><?php echo $vehicle['year']; ?></div>
-                                    </div>
-                                </div>
-
-                                <div class="detail-row">
-                                    <div class="detail-icon">
-                                        <i class="bi bi-tag-fill"></i>
-                                    </div>
-                                    <div class="detail-content">
-                                        <div class="detail-label">Vehicle ID</div>
-                                        <div class="detail-value">#<?php echo str_pad($vehicle['id'], 4, '0', STR_PAD_LEFT); ?></div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <!-- Action Buttons -->
-                            <div class="action-section">
-                                <a class="btn-primary-action" href="index.php#request">
-                                    Request Car
-                                </a>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Sidebar -->
-                <div class="col-lg-4">
-                    <div class="detail-card">
-                        <div class="additional-info">
-                            <h3 class="info-title">Vehicle Information</h3>
-                            
-                            <div class="info-item">
-                                <span class="info-label">Make</span>
-                                <span class="info-value"><?php echo $vehicle['make']; ?></span>
-                            </div>
-                            
-                            <div class="info-item">
-                                <span class="info-label">Model</span>
-                                <span class="info-value"><?php echo $vehicle['model']; ?></span>
-                            </div>
-                            
-                            <div class="info-item">
-                                <span class="info-label">Year</span>
-                                <span class="info-value"><?php echo $vehicle['year']; ?></span>
-                            </div>
-                            
-                            <div class="info-item">
-                                <span class="info-label">Color</span>
-                                <span class="info-value"><?php echo $vehicle['color'] ?: 'N/A'; ?></span>
-                            </div>
-                            
-                            <div class="info-item">
-                                <span class="info-label">Purchase Date</span>
-                                <span class="info-value"><?php echo date('F d, Y', strtotime($vehicle['purchase_date'])); ?></span>
-                            </div>
-                            
-                            <?php if (!empty($vehicle['sale_date'])): ?>
-                            <div class="info-item">
-                                <span class="info-label">Sale Date</span>
-                                <span class="info-value"><?php echo date('F d, Y', strtotime($vehicle['sale_date'])); ?></span>
-                            </div>
-                            <?php endif; ?>
-                            
-                            <div class="info-item">
-                                <span class="info-label">Status</span>
-                                <span class="info-value"><?php echo $vehicle['status']; ?></span>
-                            </div>
-                            
-                            <?php if (!empty($vehicle['notes'])): ?>
-                            <div class="info-item" style="flex-direction: column; align-items: flex-start;">
-                                <span class="info-label mb-2">Notes</span>
-                                <span class="info-value"><?php echo nl2br(htmlspecialchars($vehicle['notes'])); ?></span>
-                            </div>
-                            <?php endif; ?>
-                        </div>
-                    </div>
-                </div>
-            </div>
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="index.php">Home</a></li>
+                    <li class="breadcrumb-item"><a href="inventory.php">Inventory</a></li>
+                    <li class="breadcrumb-item active"><?php echo htmlspecialchars($vehicle['year'] . ' ' . $vehicle['make'] . ' ' . $vehicle['model']); ?></li>
+                </ol>
+            </nav>
         </div>
     </div>
 
+    <!-- Vehicle Details -->
+    <section class="vehicle-page">
+        <div class="container">
+            <div class="row">
+
+                <!-- LEFT: Image + Info -->
+                <div class="col-lg-8">
+
+                    <!-- ── Image Hero ── -->
+                    <div class="image-hero">
+                        <?php
+                            $img_src = '';
+                            if (!empty($vehicle['image'])) {
+                                $paths = [
+                                    $vehicle['image'],
+                                    'admin/' . $vehicle['image'],
+                                    '../' . $vehicle['image'],
+                                ];
+                                foreach ($paths as $p) {
+                                    if (file_exists($p)) { $img_src = $p; break; }
+                                }
+                            }
+                        ?>
+                        <?php if ($img_src): ?>
+                            <img src="<?php echo htmlspecialchars($img_src); ?>"
+                                 alt="<?php echo htmlspecialchars($vehicle['make'] . ' ' . $vehicle['model']); ?>">
+                        <?php else: ?>
+                            <div class="image-placeholder">
+                                <i class="bi bi-car-front"></i>
+                                <p>No photo available</p>
+                            </div>
+                        <?php endif; ?>
+
+                        <?php
+                            $sc = 'pill-available';
+                            if ($vehicle['status'] == 'Sold')     $sc = 'pill-sold';
+                            elseif ($vehicle['status'] == 'Reserved') $sc = 'pill-reserved';
+                        ?>
+                        <span class="status-pill <?php echo $sc; ?>">
+                            <i class="bi bi-<?php echo $vehicle['status'] == 'Available' ? 'check-circle' : ($vehicle['status'] == 'Sold' ? 'x-circle' : 'clock'); ?>"></i>
+                            <?php echo htmlspecialchars($vehicle['status']); ?>
+                        </span>
+                    </div>
+
+                    <!-- ── Info Panel ── -->
+                    <div class="info-panel mt-4">
+
+                        <?php if ($vehicle['status'] == 'Sold'): ?>
+                        <div class="sold-banner">
+                            <i class="bi bi-exclamation-circle-fill" style="font-size:1.25rem;"></i>
+                            This vehicle has been sold. Contact us to check for similar vehicles.
+                        </div>
+                        <?php endif; ?>
+
+                        <div class="vehicle-make-model">
+                            <?php echo htmlspecialchars($vehicle['make']); ?> &bull; <?php echo htmlspecialchars($vehicle['year']); ?>
+                        </div>
+
+                        <h1 class="vehicle-heading">
+                            <?php echo htmlspecialchars($vehicle['year'] . ' ' . $vehicle['make'] . ' ' . $vehicle['model']); ?>
+                        </h1>
+
+                        <!-- Price Card -->
+                        <div class="price-card">
+                            <div>
+                                <div class="price-label-text">Listing Price</div>
+                                <div class="price-amount">
+                                    ₦<?php echo number_format($display_price, 2); ?>
+                                </div>
+                            </div>
+                            <div class="price-icon">
+                                <i class="bi bi-currency-exchange"></i>
+                            </div>
+                        </div>
+
+                        <!-- Specs Grid -->
+                        <div class="specs-grid">
+                            <div class="spec-tile">
+                                <div class="spec-icon"><i class="bi bi-calendar-check"></i></div>
+                                <div>
+                                    <div class="spec-label">Year</div>
+                                    <div class="spec-value"><?php echo htmlspecialchars($vehicle['year']); ?></div>
+                                </div>
+                            </div>
+
+                            <div class="spec-tile">
+                                <div class="spec-icon"><i class="bi bi-palette-fill"></i></div>
+                                <div>
+                                    <div class="spec-label">Color</div>
+                                    <div class="spec-value"><?php echo htmlspecialchars($vehicle['color'] ?: 'N/A'); ?></div>
+                                </div>
+                            </div>
+
+                            <div class="spec-tile">
+                                <div class="spec-icon"><i class="bi bi-person-fill"></i></div>
+                                <div>
+                                    <div class="spec-label">Make</div>
+                                    <div class="spec-value"><?php echo htmlspecialchars($vehicle['make']); ?></div>
+                                </div>
+                            </div>
+
+                            <div class="spec-tile">
+                                <div class="spec-icon"><i class="bi bi-car-front-fill"></i></div>
+                                <div>
+                                    <div class="spec-label">Model</div>
+                                    <div class="spec-value"><?php echo htmlspecialchars($vehicle['model']); ?></div>
+                                </div>
+                            </div>
+
+                            <?php if (!empty($vehicle['vin'])): ?>
+                            <div class="spec-tile" style="grid-column: 1 / -1;">
+                                <div class="spec-icon"><i class="bi bi-upc-scan"></i></div>
+                                <div>
+                                    <div class="spec-label">Chassis Number</div>
+                                    <div class="spec-value" style="font-family: monospace; font-size: 0.875rem;"><?php echo htmlspecialchars($vehicle['vin']); ?></div>
+                                </div>
+                            </div>
+                            <?php endif; ?>
+                        </div>
+
+                        <!-- CTA Buttons -->
+                        <?php if ($vehicle['status'] !== 'Sold'): ?>
+                        <div class="cta-group">
+                            <a href="index.php#request" class="btn-cta-primary">
+                                <i class="bi bi-telephone-fill"></i> Request This Car
+                            </a>
+                            <a href="index.php#contact" class="btn-cta-secondary">
+                                <i class="bi bi-chat-dots"></i> Contact Us
+                            </a>
+                        </div>
+                        <?php else: ?>
+                        <div class="cta-group">
+                            <a href="inventory.php" class="btn-cta-primary">
+                                <i class="bi bi-search"></i> Browse Similar Cars
+                            </a>
+                        </div>
+                        <?php endif; ?>
+
+                        <!-- Trust Chips -->
+                        <div class="trust-chips">
+                            <div class="trust-chip"><i class="bi bi-shield-check"></i> Quality Verified</div>
+                            <div class="trust-chip"><i class="bi bi-award"></i> Trusted Dealer</div>
+                            <div class="trust-chip"><i class="bi bi-headset"></i> After-sale Support</div>
+                        </div>
+
+                    </div>
+                </div>
+
+                <!-- RIGHT: Sidebar -->
+                <div class="col-lg-4 mt-4 mt-lg-0">
+                    <div class="sidebar-card">
+                        <div class="sidebar-card-header">
+                            <h3><i class="bi bi-info-circle"></i> Vehicle Details</h3>
+                        </div>
+
+                        <div class="info-list">
+                            <div class="info-row">
+                                <span class="info-row-label">Make</span>
+                                <span class="info-row-value"><?php echo htmlspecialchars($vehicle['make']); ?></span>
+                            </div>
+                            <div class="info-row">
+                                <span class="info-row-label">Model</span>
+                                <span class="info-row-value"><?php echo htmlspecialchars($vehicle['model']); ?></span>
+                            </div>
+                            <div class="info-row">
+                                <span class="info-row-label">Year</span>
+                                <span class="info-row-value"><?php echo htmlspecialchars($vehicle['year']); ?></span>
+                            </div>
+                            <div class="info-row">
+                                <span class="info-row-label">Color</span>
+                                <span class="info-row-value"><?php echo htmlspecialchars($vehicle['color'] ?: 'Not Specified'); ?></span>
+                            </div>
+                            <div class="info-row">
+                                <span class="info-row-label">Listing Price</span>
+                                <span class="info-row-value" style="color: var(--primary); font-size: 1rem;">₦<?php echo number_format($display_price, 2); ?></span>
+                            </div>
+                            <div class="info-row">
+                                <span class="info-row-label">Listed On</span>
+                                <span class="info-row-value"><?php echo date('M d, Y', strtotime($vehicle['purchase_date'])); ?></span>
+                            </div>
+                            <?php if (!empty($vehicle['sale_date'])): ?>
+                            <div class="info-row">
+                                <span class="info-row-label">Sale Date</span>
+                                <span class="info-row-value"><?php echo date('M d, Y', strtotime($vehicle['sale_date'])); ?></span>
+                            </div>
+                            <?php endif; ?>
+                            <div class="info-row">
+                                <span class="info-row-label">Status</span>
+                                <span class="info-row-value">
+                                    <?php
+                                        $sc2 = 'status-inline-available';
+                                        $ic2 = 'check-circle-fill';
+                                        if ($vehicle['status'] == 'Sold')     { $sc2 = 'status-inline-sold';     $ic2 = 'x-circle-fill'; }
+                                        elseif ($vehicle['status'] == 'Reserved') { $sc2 = 'status-inline-reserved'; $ic2 = 'clock-fill'; }
+                                    ?>
+                                    <span class="status-inline <?php echo $sc2; ?>">
+                                        <i class="bi bi-<?php echo $ic2; ?>"></i>
+                                        <?php echo htmlspecialchars($vehicle['status']); ?>
+                                    </span>
+                                </span>
+                            </div>
+                            <div class="info-row">
+                                <span class="info-row-label">Vehicle ID</span>
+                                <span class="info-row-value" style="font-family: monospace;">#<?php echo str_pad($vehicle['id'], 4, '0', STR_PAD_LEFT); ?></span>
+                            </div>
+                        </div>
+
+                        <div class="contact-box">
+                            <p>Interested in this vehicle? Reach us directly and we'll get back to you promptly.</p>
+                            <a href="tel:+2347016754887" class="contact-phone">
+                                <i class="bi bi-telephone-fill"></i> +234 701 675 4887
+                            </a>
+                            <a href="index.php#contact" class="btn-cta-primary" style="padding: 0.75rem 1rem; font-size: 0.875rem;">
+                                <i class="bi bi-envelope"></i> Send Enquiry
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </section>
+
     <!-- Footer -->
     <footer>
-        <div class="container text-center">
-            <p>&copy; <?php echo date('Y'); ?> Firstchoice Superwheels. All rights reserved.</p>
+        <div class="container">
+            <div class="d-flex flex-wrap justify-content-between align-items-center gap-3">
+                <p>&copy; <?php echo date('Y'); ?> Firstchoice Superwheels. All rights reserved.</p>
+                <div style="display: flex; gap: 1.5rem;">
+                    <a href="index.php">Home</a>
+                    <a href="inventory.php">Inventory</a>
+                    <a href="index.php#contact">Contact</a>
+                </div>
+            </div>
         </div>
     </footer>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script>
-        function contactUs() {
-            alert('Contact Us Feature\n\nPlease call or email us to inquire about this vehicle.\n\nThis would typically open a contact form or display contact information.');
-        }
-    </script>
 </body>
 </html>

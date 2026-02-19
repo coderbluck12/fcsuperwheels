@@ -640,7 +640,9 @@ include 'inc/header.php';
                 <tbody>
                     <?php foreach ($recent_sales as $sale): ?>
                         <?php 
-                        $profit = $sale['sale_price'] - $sale['purchase_price'];
+                        // Use sale_price if set, otherwise fall back to listing_price
+                        $actual_sale_price = !empty($sale['sale_price']) ? $sale['sale_price'] : ($sale['listing_price'] ?? 0);
+                        $profit = $actual_sale_price - $sale['purchase_price'];
                         ?>
                         <tr>
                             <td>
@@ -649,11 +651,11 @@ include 'inc/header.php';
                                 </div>
                             </td>
                             <td><?php echo date('M j, Y', strtotime($sale['sale_date'] ?: $sale['updated_at'])); ?></td>
-                            <td>$<?php echo number_format($sale['purchase_price'], 2); ?></td>
-                            <td class="sale-amount">$<?php echo number_format($sale['sale_price'], 2); ?></td>
+                            <td>₦<?php echo number_format($sale['purchase_price'], 2); ?></td>
+                            <td class="sale-amount">₦<?php echo number_format($actual_sale_price, 2); ?></td>
                             <td class="mobile-hide">
-                                <span class="profit-amount <?php echo $profit >= 0 ? 'profit-negative' : 'profit-positive'; ?>">
-                                    <?php echo $profit >= 0 ? '+' : ''; ?>₦<?php echo number_format($profit, 2); ?>
+                                <span class="profit-amount <?php echo $profit >= 0 ? 'profit-positive' : 'profit-negative'; ?>">
+                                    <?php echo $profit >= 0 ? '+' : '-'; ?>₦<?php echo number_format(abs($profit), 2); ?>
                                 </span>
                             </td>
                         </tr>
