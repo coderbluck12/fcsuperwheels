@@ -447,6 +447,7 @@ include 'inc/header.php';
 
 .profit-amount {
     font-weight: 700;
+    white-space: nowrap;
 }
 
 .profit-positive {
@@ -627,14 +628,15 @@ include 'inc/header.php';
             </h3>
         </div>
         <?php if (count($recent_sales) > 0): ?>
-            <table class="sales-table">
+            <div style="overflow-x: auto; -webkit-overflow-scrolling: touch;">
+            <table class="sales-table" style="min-width: 600px;">
                 <thead>
                     <tr>
                         <th>Vehicle</th>
                         <th>Sale Date</th>
                         <th>Purchase Price</th>
                         <th>Sale Price</th>
-                        <th class="mobile-hide">Profit</th>
+                        <th>Profit</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -653,7 +655,7 @@ include 'inc/header.php';
                             <td><?php echo date('M j, Y', strtotime($sale['sale_date'] ?: $sale['updated_at'])); ?></td>
                             <td>₦<?php echo number_format($sale['purchase_price'], 2); ?></td>
                             <td class="sale-amount">₦<?php echo number_format($actual_sale_price, 2); ?></td>
-                            <td class="mobile-hide">
+                            <td>
                                 <span class="profit-amount <?php echo $profit >= 0 ? 'profit-positive' : 'profit-negative'; ?>">
                                     <?php echo $profit >= 0 ? '+' : '-'; ?>₦<?php echo number_format(abs($profit), 2); ?>
                                 </span>
@@ -662,6 +664,7 @@ include 'inc/header.php';
                     <?php endforeach; ?>
                 </tbody>
             </table>
+            </div><!-- end overflow-x scroll wrapper -->
 
             <?php if (isset($pagination) && $pagination->getTotalPages() > 1): ?>
                 <div class="d-flex justify-content-between align-items-center p-4 border-top">
