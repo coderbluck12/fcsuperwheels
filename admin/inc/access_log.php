@@ -67,8 +67,8 @@ function log_access($action, $page = null, $user_id = null, $username = null) {
     }
 }
 
-// 3. Fetch Logs Function (FIXED QUERY LOGIC)
-function get_access_logs($limit = 100, $user_filter = '', $action_filter = '', $date_from = '', $date_to = '') {
+// 3. Fetch Logs Function (supports pagination via LIMIT + OFFSET)
+function get_access_logs($limit = 25, $user_filter = '', $action_filter = '', $date_from = '', $date_to = '', $offset = 0) {
     $pdo = get_db_connection();
     if (!$pdo) return [];
     
@@ -79,7 +79,6 @@ function get_access_logs($limit = 100, $user_filter = '', $action_filter = '', $
     
     $params = [];
     
-    // Add filters using only '?' placeholders
     if (!empty($user_filter)) {
         $sql .= " AND (al.username LIKE ? OR u.firstname LIKE ? OR u.lastname LIKE ?)";
         $term = "%$user_filter%";
@@ -103,20 +102,53 @@ function get_access_logs($limit = 100, $user_filter = '', $action_filter = '', $
         $params[] = $date_to . " 23:59:59";
     }
     
-    // SAFE LIMIT: Cast to int and append directly. 
-    // This avoids the '?' vs ':limit' mix conflict.
-    $sql .= " ORDER BY al.created_at DESC LIMIT " . (int)$limit;
+    $sql .= " ORDER BY al.created_at DESC LIMIT " . (int)$limit . " OFFSET " . (int)$offset;
     
     try {
         $stmt = $pdo->prepare($sql);
         $stmt->execute($params);
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     } catch (PDOException $e) {
-        // Echo the error so we can debug on screen
         echo "<div class='alert alert-danger'>SQL Error: " . $e->getMessage() . "</div>";
         return [];
     }
 }
+
+// 3b. Count filtered logs (for pagination total pages)
+function get_access_log_count($user_filter = '', $action_filter = '', $date_from = '', $date_to = '') {
+    $pdo = get_db_connection();
+    if (!$pdo) return 0;
+    
+    $sql = "SELECT COUNT(*) FROM access_log al LEFT JOIN user u ON al.user_id = u.id WHERE 1=1";
+    $params = [];
+    
+    if (!empty($user_filter)) {
+        $sql .= " AND (al.username LIKE ? OR u.firstname LIKE ? OR u.lastname LIKE ?)";
+        $term = "%$user_filter%";
+        $params[] = $term; $params[] = $term; $params[] = $term;
+    }
+    if (!empty($action_filter)) {
+        $sql .= " AND al.action LIKE ?";
+        $params[] = "%$action_filter%";
+    }
+    if (!empty($date_from)) {
+        $sql .= " AND al.created_at >= ?";
+        $params[] = $date_from . " 00:00:00";
+    }
+    if (!empty($date_to)) {
+        $sql .= " AND al.created_at <= ?";
+        $params[] = $date_to . " 23:59:59";
+    }
+    
+    try {
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute($params);
+        return (int)$stmt->fetchColumn();
+    } catch (PDOException $e) {
+        return 0;
+    }
+}
+
 
 // 4. Stats Function
 function get_access_log_stats() {

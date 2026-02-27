@@ -6,9 +6,7 @@ error_reporting(E_ALL);
 
 include_once('inc/session_manager.php');
 include_once('inc/access_log.php');
-
-// Explicitly get connection
-$pdo = get_db_connection();
+include_once('inc/pagination.php');
 
 // Log access log page access
 log_access('VIEW_ACCESS_LOG', 'access_log.php');
@@ -51,14 +49,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_logs'])) {
 }
 
 // Get filter parameters
-$limit = isset($_GET['limit']) ? (int)$_GET['limit'] : 100;
-$user_filter = isset($_GET['user']) ? trim($_GET['user']) : '';
-$action_filter = isset($_GET['action']) ? trim($_GET['action']) : '';
-$date_from = isset($_GET['date_from']) ? $_GET['date_from'] : '';
-$date_to = isset($_GET['date_to']) ? $_GET['date_to'] : '';
+$user_filter   = isset($_GET['user'])      ? trim($_GET['user'])      : '';
+$action_filter = isset($_GET['action'])    ? trim($_GET['action'])    : '';
+$date_from     = isset($_GET['date_from']) ? $_GET['date_from']       : '';
+$date_to       = isset($_GET['date_to'])   ? $_GET['date_to']         : '';
 
-// Get logs and stats
-$logs = get_access_logs($limit, $user_filter, $action_filter, $date_from, $date_to);
+// Pagination setup
+$items_per_page = 25;
+$current_page   = isset($_GET['page']) ? max(1, (int)$_GET['page']) : 1;
+$total_logs     = get_access_log_count($user_filter, $action_filter, $date_from, $date_to);
+$pagination     = new Pagination($total_logs, $items_per_page, $current_page);
+$offset         = $pagination->getOffset();
+
+// Fetch current page of logs
+$logs  = get_access_logs($items_per_page, $user_filter, $action_filter, $date_from, $date_to, $offset);
 $stats = get_access_log_stats();
 
 $path_to_root = './';
@@ -536,15 +540,6 @@ include 'inc/header.php';
                     <label class="form-label">To</label>
                     <input type="date" name="date_to" class="form-control" value="<?php echo htmlspecialchars($date_to); ?>">
                 </div>
-                <div>
-                    <label class="form-label">Limit</label>
-                    <select name="limit" class="form-select">
-                        <option value="50" <?php echo $limit == 50 ? 'selected' : ''; ?>>50 results</option>
-                        <option value="100" <?php echo $limit == 100 ? 'selected' : ''; ?>>100 results</option>
-                        <option value="200" <?php echo $limit == 200 ? 'selected' : ''; ?>>200 results</option>
-                        <option value="500" <?php echo $limit == 500 ? 'selected' : ''; ?>>500 results</option>
-                    </select>
-                </div>
             </div>
             <div class="filter-actions">
                 <button type="submit" class="btn btn-primary">
@@ -620,6 +615,25 @@ include 'inc/header.php';
                     <?php endif; ?>
                 </tbody>
             </table>
+        </div>
+
+        <!-- Pagination -->
+        <?php
+        $base_url = 'access_log.php?'
+            . ($user_filter   ? 'user='      . urlencode($user_filter)   . '&' : '')
+            . ($action_filter ? 'action='    . urlencode($action_filter) . '&' : '')
+            . ($date_from     ? 'date_from=' . urlencode($date_from)     . '&' : '')
+            . ($date_to       ? 'date_to='   . urlencode($date_to)       . '&' : '');
+        // Strip trailing & — the Pagination class will append ?page= or &page=
+        $base_url = rtrim($base_url, '&?');
+        ?>
+        <div class="d-flex justify-content-between align-items-center p-4 border-top flex-wrap gap-2">
+            <div class="text-muted" style="font-size: 0.875rem;">
+                <?php echo $pagination->getPaginationInfo(); ?>
+            </div>
+            <?php if ($pagination->getTotalPages() > 1): ?>
+                <?php echo $pagination->generatePaginationLinks($base_url); ?>
+            <?php endif; ?>
         </div>
     </div>
 </div>

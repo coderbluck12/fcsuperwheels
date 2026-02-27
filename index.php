@@ -1,4 +1,20 @@
-
+<?php
+session_start();
+// Generate CAPTCHA question if none set
+if (empty($_SESSION['captcha_answer'])) {
+    $n1 = rand(1, 9);
+    $n2 = rand(1, 9);
+    $_SESSION['captcha_answer'] = $n1 + $n2;
+    $_SESSION['captcha_question'] = "$n1 + $n2";
+}
+// Refresh CAPTCHA so each page load gives a new one (only after failure)
+if (isset($_GET['fail_captcha'])) {
+    $n1 = rand(1, 9);
+    $n2 = rand(1, 9);
+    $_SESSION['captcha_answer'] = $n1 + $n2;
+    $_SESSION['captcha_question'] = "$n1 + $n2";
+}
+?>
 
 <!DOCTYPE html>
 <html lang="en">
@@ -54,11 +70,14 @@
 
         // Check the 'status' parameter and display an alert accordingly
         window.onload = function() {
-            const success = getUrlParameter('success'); // Check if 'success' is present
-            const fail = getUrlParameter('fail'); // Check if 'fail' is present
+            const success      = getUrlParameter('success');
+            const fail         = getUrlParameter('fail');
+            const failCaptcha  = getUrlParameter('fail_captcha');
 
             if (success !== null) {
                 alert('Your request was submitted successfully!');
+            } else if (failCaptcha !== null) {
+                alert('Security check failed. Please answer the CAPTCHA correctly and try again.');
             } else if (fail !== null) {
                 alert('There was an error processing your request. Please try again.');
             }
@@ -209,6 +228,10 @@
                                    <label>Enter car details*</label>
 							  <input type="text" name="others" class="contactus" placeholder="Car Make, Model, Year, and Any Other Details" required/>
                                  </select>
+                              </div>
+                              <div class="col-md-12">
+                                 <label>Security Check: What is <?php echo htmlspecialchars($_SESSION['captcha_question']); ?> ?</label>
+                                 <input type="number" name="captcha_answer" class="contactus" placeholder="Your answer" required style="width:100%;"/>
                               </div>
                               <div class="col-sm-12">
                                  <button name="request_button" class="find_btn">Submit Request</button>

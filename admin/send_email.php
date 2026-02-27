@@ -5,6 +5,24 @@ include_once('inc/access_log.php');
 // Log page access
 log_access('VIEW_SEND_EMAIL', 'send_email.php');
 
+// --- Real DB Stats ---
+try {
+    $stat_total   = $pdo->query("SELECT COUNT(*) FROM user")->fetchColumn();
+    $stat_active  = $pdo->query("SELECT COUNT(*) FROM user WHERE status = 1")->fetchColumn();
+    $stat_email   = $pdo->query("SELECT COUNT(*) FROM user WHERE status = 1 AND email IS NOT NULL AND email != ''")->fetchColumn();
+} catch (PDOException $e) {
+    $stat_total = $stat_active = $stat_email = 0;
+}
+try {
+    $today = date('Y-m-d');
+    $stmt_today = $pdo->prepare("SELECT COUNT(*) FROM access_log WHERE action = 'SEND_EMAIL' AND DATE(accessed_at) = ?");
+    $stmt_today->execute([$today]);
+    $stat_sent_today = $stmt_today->fetchColumn();
+} catch (PDOException $e) {
+    $stat_sent_today = 0;
+}
+
+
 $message = '';
 $errors = [];
 
@@ -403,19 +421,19 @@ include 'inc/header.php';
     <!-- Email Statistics -->
     <div class="stats-grid">
         <div class="stat-card">
-            <div class="stat-value" id="totalStaff">-</div>
+            <div class="stat-value"><?php echo (int)$stat_total; ?></div>
             <div class="stat-label">Total Staff</div>
         </div>
         <div class="stat-card">
-            <div class="stat-value" id="activeStaff">-</div>
+            <div class="stat-value"><?php echo (int)$stat_active; ?></div>
             <div class="stat-label">Active Staff</div>
         </div>
         <div class="stat-card">
-            <div class="stat-value" id="staffWithEmail">-</div>
+            <div class="stat-value"><?php echo (int)$stat_email; ?></div>
             <div class="stat-label">Staff with Email</div>
         </div>
         <div class="stat-card">
-            <div class="stat-value" id="emailsSent">-</div>
+            <div class="stat-value"><?php echo (int)$stat_sent_today; ?></div>
             <div class="stat-label">Emails Sent Today</div>
         </div>
     </div>
@@ -580,24 +598,8 @@ function clearForm() {
     }
 }
 
-// Load statistics
-async function loadStats() {
-    try {
-        // In a real application, you'd fetch this from an API
-        // For now, we'll simulate with sample data
-        document.getElementById('totalStaff').textContent = '12';
-        document.getElementById('activeStaff').textContent = '10';
-        document.getElementById('staffWithEmail').textContent = '8';
-        document.getElementById('emailsSent').textContent = '5';
-    } catch (error) {
-        console.error('Error loading stats:', error);
-    }
-}
-
 // Initialize
 document.addEventListener('DOMContentLoaded', function() {
-    loadStats();
-    
     // Set initial state
     const recipientsRadio = document.querySelector('input[name="recipients"]:checked');
     if (recipientsRadio && recipientsRadio.value === 'custom') {

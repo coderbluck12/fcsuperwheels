@@ -49,6 +49,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_expense'])) {
     }
 }
 
+// Edit Expense
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['edit_expense'])) {
+    $expense_id   = (int)$_POST['expense_id'];
+    $description  = validate_input($_POST['description']);
+    $amount       = (float)$_POST['amount'];
+    $expense_date = $_POST['expense_date'];
+
+    try {
+        $stmt = $pdo->prepare("UPDATE expenses SET description = ?, amount = ?, expense_date = ? WHERE id = ? AND vehicle_id = ?");
+        $stmt->execute([$description, $amount, $expense_date, $expense_id, $id]);
+        $message = '<div class="alert alert-success alert-dismissible fade show" role="alert">
+                        Expense updated successfully!
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>';
+    } catch (PDOException $e) {
+        $message = '<div class="alert alert-danger alert-dismissible fade show" role="alert">
+                        Error updating expense: ' . $e->getMessage() . '
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>';
+    }
+}
+
 // Fetch Vehicle
 $stmt = $pdo->prepare("SELECT * FROM vehicles WHERE id = ?");
 $stmt->execute([$id]);
@@ -332,6 +354,27 @@ include 'inc/header.php';
         color: #991b1b;
     }
 
+    .btn-edit-expense {
+        color: #d97706;
+        background: none;
+        border: none;
+        padding: 0.25rem;
+        cursor: pointer;
+        transition: color 0.2s;
+    }
+
+    .btn-edit-expense:hover {
+        color: #b45309;
+    }
+
+    .expense-total-row td {
+        font-weight: 800;
+        font-size: 1rem;
+        color: #111827;
+        border-top: 2px solid #e5e7eb;
+        background: #f9fafb;
+    }
+
     .empty-state {
         text-align: center;
         padding: 4rem 2rem;
@@ -469,7 +512,7 @@ include 'inc/header.php';
                                 <th>Date</th>
                                 <th>Description</th>
                                 <th>Amount</th>
-                                <th style="width: 50px;"></th>
+                                <th style="width: 80px;"></th>
                             </tr>
                         </thead>
                         <tbody>
@@ -478,7 +521,11 @@ include 'inc/header.php';
                                 <td><?php echo date('M j, Y', strtotime($expense['expense_date'])); ?></td>
                                 <td><strong><?php echo htmlspecialchars($expense['description']); ?></strong></td>
                                 <td class="expense-amount">₦<?php echo number_format($expense['amount'], 2); ?></td>
-                                <td>
+                                <td style="white-space: nowrap;">
+                                    <button type="button" class="btn-edit-expense"
+                                            onclick="openEditExpenseModal(<?php echo $expense['id']; ?>, '<?php echo addslashes(htmlspecialchars($expense['description'])); ?>', <?php echo $expense['amount']; ?>, '<?php echo $expense['expense_date']; ?>')">
+                                        <i class="bi bi-pencil"></i>
+                                    </button>
                                     <button type="button" class="btn-delete-expense" 
                                             onclick="confirmDeleteExpense(<?php echo $expense['id']; ?>, '<?php echo addslashes(htmlspecialchars($expense['description'])); ?>', <?php echo $expense['amount']; ?>)">
                                         <i class="bi bi-trash"></i>
@@ -487,6 +534,13 @@ include 'inc/header.php';
                             </tr>
                             <?php endforeach; ?>
                         </tbody>
+                        <tfoot>
+                            <tr class="expense-total-row">
+                                <td colspan="2">Total Expenses</td>
+                                <td>₦<?php echo number_format($total_expenses, 2); ?></td>
+                                <td></td>
+                            </tr>
+                        </tfoot>
                     </table>
                 </div>
             <?php else: ?>
@@ -551,6 +605,15 @@ function openExpenseModal() {
     modal.show();
 }
 
+function openEditExpenseModal(id, description, amount, expenseDate) {
+    document.getElementById('edit_expense_id').value       = id;
+    document.getElementById('edit_expense_desc').value     = description;
+    document.getElementById('edit_expense_amount').value   = amount;
+    document.getElementById('edit_expense_date').value     = expenseDate;
+    const modal = new bootstrap.Modal(document.getElementById('editExpenseModal'));
+    modal.show();
+}
+
 function confirmDeleteExpense(id, description, amount) {
     document.getElementById('delete_expense_id').value = id;
     document.getElementById('delete_expense_info').textContent = description + ' (₦' + parseFloat(amount).toLocaleString() + ')';
@@ -558,6 +621,39 @@ function confirmDeleteExpense(id, description, amount) {
     modal.show();
 }
 </script>
+
+<!-- Edit Expense Modal -->
+<div class="modal fade" id="editExpenseModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="POST">
+                <input type="hidden" name="expense_id" id="edit_expense_id">
+                <div class="modal-header">
+                    <h5 class="modal-title" style="font-weight: 700;">Edit Expense</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Description</label>
+                        <input type="text" name="description" id="edit_expense_desc" class="form-control" required placeholder="e.g., Oil Change, Tire Replacement">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Amount (₦)</label>
+                        <input type="number" step="0.01" name="amount" id="edit_expense_amount" class="form-control" required placeholder="0.00">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Date</label>
+                        <input type="date" name="expense_date" id="edit_expense_date" class="form-control" required>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" name="edit_expense" class="btn btn-warning text-white">Save Changes</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
 
 <!-- Delete Expense Modal -->
 <div class="modal fade" id="deleteExpenseModal" tabindex="-1">

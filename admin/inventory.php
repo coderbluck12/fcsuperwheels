@@ -579,14 +579,14 @@ include($path_to_root . 'inc/header.php');
                 </tbody>
             </table>
             
-            <?php if (isset($pagination) && $pagination->getTotalPages() > 1): ?>
-                <div class="d-flex justify-content-between align-items-center p-4">
-                    <div class="text-muted" style="font-size: 0.875rem;">
-                        <?php echo $pagination->getPaginationInfo(); ?>
-                    </div>
-                    <?php echo $pagination->generatePaginationLinks('inventory.php'); ?>
+            <div class="d-flex justify-content-between align-items-center p-4">
+                <div class="text-muted" style="font-size: 0.875rem;">
+                    <?php echo $pagination->getPaginationInfo(); ?>
                 </div>
-            <?php endif; ?>
+                <?php if ($pagination->getTotalPages() > 1): ?>
+                    <?php echo $pagination->generatePaginationLinks('inventory.php'); ?>
+                <?php endif; ?>
+            </div>
             
             <?php else: ?>
                 <div class="p-5 text-center text-muted">

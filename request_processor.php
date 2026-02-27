@@ -1,5 +1,21 @@
 <?php
+session_start();
 include_once('admin/inc/functions.php');
+
+// CAPTCHA validation
+if (isset($_POST['request_button'])) {
+    $captcha_input  = isset($_POST['captcha_answer']) ? (int)$_POST['captcha_answer'] : -1;
+    $captcha_answer = isset($_SESSION['captcha_answer']) ? (int)$_SESSION['captcha_answer'] : null;
+
+    if ($captcha_answer === null || $captcha_input !== $captcha_answer) {
+        // Clear so a new question is generated on next page load
+        unset($_SESSION['captcha_answer'], $_SESSION['captcha_question']);
+        redirect_to('index.php?fail_captcha');
+        exit();
+    }
+    // Clear captcha after successful validation to force a fresh one next time
+    unset($_SESSION['captcha_answer'], $_SESSION['captcha_question']);
+}
 
 if(isset($_POST['request_button']))
 {

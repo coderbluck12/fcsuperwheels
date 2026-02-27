@@ -414,25 +414,7 @@ foreach($vehicles as $v) {
          </div>
       </section>
       
-      <!-- Stats Section -->
-      <section class="stats-section">
-         <div class="container">
-            <div class="stats-container">
-               <div class="stat-box">
-                   <div class="stat-number"><?php echo count($vehicles); ?></div>
-                   <div class="stat-label">Total Vehicles</div>
-               </div>
-               <div class="stat-box">
-                   <div class="stat-number"><?php echo $available_count; ?></div>
-                   <div class="stat-label">Available</div>
-               </div>
-               <div class="stat-box">
-                   <div class="stat-number"><?php echo $sold_count; ?></div>
-                   <div class="stat-label">Sold</div>
-               </div>
-            </div>
-         </div>
-      </section>
+
       
       <!-- Filter Section -->
       <section class="filter-section">
