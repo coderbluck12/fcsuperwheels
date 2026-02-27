@@ -2,19 +2,18 @@
 session_start();
 include_once('admin/inc/functions.php');
 
-// CAPTCHA validation
+// CAPTCHA validation (image-based)
 if (isset($_POST['request_button'])) {
-    $captcha_input  = isset($_POST['captcha_answer']) ? (int)$_POST['captcha_answer'] : -1;
-    $captcha_answer = isset($_SESSION['captcha_answer']) ? (int)$_SESSION['captcha_answer'] : null;
+    $captcha_input  = strtoupper(trim($_POST['captcha_answer'] ?? ''));
+    $captcha_code   = $_SESSION['captcha_code'] ?? null;
 
-    if ($captcha_answer === null || $captcha_input !== $captcha_answer) {
-        // Clear so a new question is generated on next page load
-        unset($_SESSION['captcha_answer'], $_SESSION['captcha_question']);
+    // Always clear session code so a new image is generated on next visit
+    unset($_SESSION['captcha_code']);
+
+    if (empty($captcha_code) || $captcha_input !== strtoupper($captcha_code)) {
         redirect_to('index.php?fail_captcha');
         exit();
     }
-    // Clear captcha after successful validation to force a fresh one next time
-    unset($_SESSION['captcha_answer'], $_SESSION['captcha_question']);
 }
 
 if(isset($_POST['request_button']))

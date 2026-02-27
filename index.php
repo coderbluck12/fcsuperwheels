@@ -1,19 +1,5 @@
 <?php
 session_start();
-// Generate CAPTCHA question if none set
-if (empty($_SESSION['captcha_answer'])) {
-    $n1 = rand(1, 9);
-    $n2 = rand(1, 9);
-    $_SESSION['captcha_answer'] = $n1 + $n2;
-    $_SESSION['captcha_question'] = "$n1 + $n2";
-}
-// Refresh CAPTCHA so each page load gives a new one (only after failure)
-if (isset($_GET['fail_captcha'])) {
-    $n1 = rand(1, 9);
-    $n2 = rand(1, 9);
-    $_SESSION['captcha_answer'] = $n1 + $n2;
-    $_SESSION['captcha_question'] = "$n1 + $n2";
-}
 ?>
 
 <!DOCTYPE html>
@@ -229,10 +215,20 @@ if (isset($_GET['fail_captcha'])) {
 							  <input type="text" name="others" class="contactus" placeholder="Car Make, Model, Year, and Any Other Details" required/>
                                  </select>
                               </div>
-                              <div class="col-md-12">
-                                 <label>Security Check: What is <?php echo htmlspecialchars($_SESSION['captcha_question']); ?> ?</label>
-                                 <input type="number" name="captcha_answer" class="contactus" placeholder="Your answer" required style="width:100%;"/>
-                              </div>
+                               <div class="col-md-12">
+                                  <label style="font-weight:600; margin-bottom:6px; display:block;">Security Check*</label>
+                                  <div style="display:flex; align-items:center; gap:10px; margin-bottom:8px;">
+                                      <img id="captchaImg" src="captcha_image.php?v=<?php echo time(); ?>" alt="CAPTCHA" style="border:1px solid #ccc; border-radius:6px; height:52px; cursor:pointer;" onclick="refreshCaptcha()" title="Click to refresh">
+                                      <button type="button" onclick="refreshCaptcha()" style="background:none; border:none; color:#2563eb; font-size:1.3rem; cursor:pointer; padding:4px;" title="Get a new CAPTCHA">&#x21bb;</button>
+                                  </div>
+                                  <input type="text" name="captcha_answer" class="contactus" placeholder="Type the characters above" required maxlength="5" autocomplete="off" style="width:100%; text-transform:uppercase; letter-spacing:3px;"/>
+                                  <small style="color:#888; display:block; margin-top:4px;">Not case sensitive &mdash; type the 5 characters shown</small>
+                               </div>
+                               <script>
+                               function refreshCaptcha() {
+                                   document.getElementById("captchaImg").src = "captcha_image.php?v=" + Date.now();
+                               }
+                               </script>
                               <div class="col-sm-12">
                                  <button name="request_button" class="find_btn">Submit Request</button>
                               </div>
