@@ -186,7 +186,28 @@ if (isset($_GET['prefix_receipt_number'])) {
                 </table>
             </td>
         </tr>
-        <tr class="heading"><td>Item information</td><td>Details</td></tr>
+        <tr class="heading"><td>Vehicle information</td><td>Details</td></tr>
+        <?php 
+        $items = json_decode($receipt['items_json'] ?? '', true);
+        if (!empty($items) && is_array($items)):
+            foreach($items as $idx => $it):
+        ?>
+            <tr class="item"><td><b>Item <?= $idx+1 ?> Name</b></td><td><?= htmlspecialchars(trim(($it['make']??'')." ".($it['model']??'')." ".($it['year']??''))) ?></td></tr>
+            <tr class="item"><td>Chassis number</td><td><?= htmlspecialchars($it['chasis']??'') ?></td></tr>
+            <tr class="item"><td>Colour</td><td><?= htmlspecialchars($it['color']??'') ?></td></tr>
+            <tr class="item"><td>Year</td><td><?= htmlspecialchars($it['year']??'') ?></td></tr>
+            <tr class="item"><td>Vehicle Price</td><td>=N=<?= number_format((float)($it['price']??0), 2) ?></td></tr>
+            <?php if (!empty($it['add_vehicle'])): ?>
+                <tr class="item"><td>Additional Info</td><td><?= htmlspecialchars($it['add_vehicle']) ?></td></tr>
+            <?php endif; ?>
+            <tr class="item space"><td></td><td></td></tr>
+        <?php
+            endforeach;
+        ?>
+        <tr class="item space"><td>Amount paid</td><td>=N=<?= number_format($receipt['amount_paid'], 2) . ' (' . ucfirst($receipt['payment_type']) . ' payment)'; ?></td></tr>
+        <?php
+        else:
+        ?>
         <tr class="item"><td>Name</td><td><?= $receipt['vehicle_make'] . ' ' . $receipt['vehicle_model'] . ' ' . $receipt['vehicle_year']; ?></td></tr>
         <?php if (!empty($receipt['vehicle_price'])): ?>
             <tr class="item"><td>Actual Price</td><td>=N=<?= number_format($receipt['vehicle_price'], 2); ?></td></tr>
@@ -198,6 +219,7 @@ if (isset($_GET['prefix_receipt_number'])) {
         <tr class="item"><td>Year</td><td><?= $receipt['vehicle_year']; ?></td></tr>
         <?php if (!empty($receipt['add_vehicle'])): ?>
             <tr class="item"><td>Additional vehicle information</td><td><?= $receipt['add_vehicle']; ?></td></tr>
+        <?php endif; ?>
         <?php endif; ?>
         <tr class="heading"><td>Payment Information</td><td>Details</td></tr>
         <tr class="item"><td>Payment type</td><td><?= ucfirst($receipt['payment_type']); ?></td></tr>
@@ -235,6 +257,7 @@ if (isset($_GET['prefix_receipt_number'])) {
         <div class="mt-3 noprint">
             <a class="btn-print" href="javascript:window.print()">Print Receipt</a>
             <a class="btn-edit" href="modifyreceipt.php?prefix_receipt_number=<?= urlencode($encrypted_id); ?>">Edit Receipt</a>
+            <a class="btn-edit" style="background-color:teal;" href="send_document.php?type=receipt&id=<?= urlencode($encrypted_id) ?>">Send Email</a>
             <a class="btn-delete" href="#" onclick="confirmDelete('delete_receipt.php?prefix_receipt_number=<?= urlencode($encrypted_id); ?>'); return false;">Delete Receipt</a>
             <a class="btn-close" href="dashboard.php">Close</a>
         </div>

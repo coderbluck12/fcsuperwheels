@@ -21,25 +21,73 @@ $signatures = $sigStmt->fetchAll(PDO::FETCH_ASSOC);
   </style>
   <script>
     function calculateTotal() {
-      let qty = parseFloat(document.getElementById('quantity').value)||0;
-      let pr  = parseFloat(document.getElementById('vehicle_price').value)||0;
-      document.getElementById('total_amount').value = (qty*pr).toFixed(2);
+      let grandTotal = 0;
+      document.querySelectorAll('.item-block').forEach(block => {
+        let qty = parseFloat(block.querySelector('.item-qty').value)||0;
+        let pr  = parseFloat(block.querySelector('.item-price').value)||0;
+        let total = (qty*pr);
+        block.querySelector('.item-total').value = total.toFixed(2);
+        grandTotal += total;
+      });
+      if(document.getElementById('grand_total_display')) {
+          document.getElementById('grand_total_display').innerText = grandTotal.toFixed(2);
+      }
     }
     function validateInvoice() {
-      let tot = parseFloat(document.getElementById('total_amount').value)||0;
-      let paid= parseFloat(document.getElementById('amount_paid').value)||0;
-      let t   = document.getElementById('payment_type').value;
-      if(paid>tot){ alert("Paid > total");return false }
+      calculateTotal();
+      let tot = 0;
+      document.querySelectorAll('.item-total').forEach(inp => tot += (parseFloat(inp.value)||0));
+      let paid= parseFloat(document.getElementById('amount_paid') ? document.getElementById('amount_paid').value : 0)||0;
+      let t   = document.getElementById('payment_type') ? document.getElementById('payment_type').value : '';
+      if(document.getElementById('amount_paid') && paid>tot){ alert("Paid > total");return false }
       if(t==='full'&&paid<tot){ alert("Full must cover total");return false }
+      
+      // Pack items into JSON
+      let items = [];
+      document.querySelectorAll('.item-block').forEach((block) => {
+        items.push({
+           make: block.querySelector('[name="vehicle_make[]"]').value,
+           model: block.querySelector('[name="vehicle_model[]"]').value,
+           year: block.querySelector('[name="vehicle_year[]"]').value,
+           chasis: block.querySelector('[name="vehicle_chasis[]"]').value,
+           color: block.querySelector('[name="vehicle_color[]"]').value,
+           quantity: block.querySelector('[name="quantity[]"]').value,
+           price: block.querySelector('[name="vehicle_price[]"]').value,
+           total: block.querySelector('.item-total').value,
+           add_vehicle: block.querySelector('[name="add_vehicle[]"]').value
+        });
+      });
+      document.getElementById('items_json').value = JSON.stringify(items);
       return true;
     }
     function previewSignature() {
       let sel = document.getElementById('signature_id'),
           img = document.getElementById('sigPreview');
-      if(sel.value){
+      if(sel && sel.value){
         img.src = sel.options[sel.selectedIndex].dataset.file;
         img.style.display = 'block';
-      } else img.style.display = 'none';
+      } else if(img) {
+        img.style.display = 'none';
+      }
+    }
+    function addItemBlock() {
+      let container = document.getElementById('itemsContainer');
+      let firstBlock = container.querySelector('.item-block');
+      let newBlock = firstBlock.cloneNode(true);
+      newBlock.querySelectorAll('input').forEach(inp => {
+          if(!inp.classList.contains('item-qty')) inp.value = '';
+          else inp.value = '1';
+      });
+      // add a remove button
+      if(!newBlock.querySelector('.btn-remove-item')) {
+          let btn = document.createElement('button');
+          btn.type = 'button';
+          btn.className = 'btn btn-sm btn-danger btn-remove-item mb-2';
+          btn.innerText = 'Remove Item';
+          btn.onclick = function() { newBlock.remove(); calculateTotal(); };
+          newBlock.insertBefore(btn, newBlock.firstChild);
+      }
+      container.appendChild(newBlock);
     }
     window.addEventListener('DOMContentLoaded',()=>{
       calculateTotal();
@@ -101,65 +149,76 @@ $signatures = $sigStmt->fetchAll(PDO::FETCH_ASSOC);
                  class="form-control mb-2" placeholder="Customer Email">
         </fieldset>
 
-        <!-- Vehicle / Item -->
-        <fieldset class="form-group">
-          <legend>Vehicle / Item Info</legend>
-
+        <!-- Vehicle / Items -->
+        <fieldset class="form-group border p-3 mb-3 bg-white shadow-sm shadow-sm" style="border-radius: 8px;">
+          <legend class="w-auto px-2 font-weight-bold text-primary">Vehicle / Item Info</legend>
+          <div id="itemsContainer">
+          <div class="item-block border p-3 mb-3" style="background:#fcfcfc; border-radius:5px;">
           <div class="form-row">
             <div class="col">
-              <label for="vehicle_make">Make *</label>
-              <input type="text" id="vehicle_make" name="vehicle_make"
+              <label>Make *</label>
+              <input type="text" name="vehicle_make[]"
                      class="form-control mb-2" placeholder="Make *" required>
             </div>
             <div class="col">
-              <label for="vehicle_model">Model *</label>
-              <input type="text" id="vehicle_model" name="vehicle_model"
+              <label>Model *</label>
+              <input type="text" name="vehicle_model[]"
                      class="form-control mb-2" placeholder="Model *" required>
             </div>
             <div class="col">
-              <label for="vehicle_year">Year *</label>
-              <input type="text" id="vehicle_year" name="vehicle_year"
+              <label>Year *</label>
+              <input type="text" name="vehicle_year[]"
                      class="form-control mb-2" placeholder="Year *" required>
             </div>
           </div>
 
           <div class="form-row">
             <div class="col">
-              <label for="vehicle_chasis">Chassis No *</label>
-              <input type="text" id="vehicle_chasis" name="vehicle_chasis"
+              <label>Chassis No *</label>
+              <input type="text" name="vehicle_chasis[]"
                      class="form-control mb-2" placeholder="Chassis No *" required>
             </div>
             <div class="col">
-              <label for="vehicle_color">Color *</label>
-              <input type="text" id="vehicle_color" name="vehicle_color"
+              <label>Color *</label>
+              <input type="text" name="vehicle_color[]"
                      class="form-control mb-2" placeholder="Color *" required>
             </div>
           </div>
 
           <div class="form-row">
             <div class="col">
-              <label for="quantity">Quantity *</label>
-              <input type="number" id="quantity" name="quantity"
-                     class="form-control mb-2" placeholder="Quantity *"
+              <label>Quantity *</label>
+              <input type="number" name="quantity[]"
+                     class="form-control mb-2 item-qty" placeholder="Quantity *"
                      value="1" min="1" oninput="calculateTotal()" required>
             </div>
             <div class="col">
-              <label for="vehicle_price">Unit Price *</label>
-              <input type="number" id="vehicle_price" name="vehicle_price"
-                     class="form-control mb-2" placeholder="Unit Price *"
+              <label>Unit Price *</label>
+              <input type="number" name="vehicle_price[]"
+                     class="form-control mb-2 item-price" placeholder="Unit Price *"
                      oninput="calculateTotal()" required>
             </div>
             <div class="col">
-              <label for="total_amount">Total</label>
-              <input type="text" id="total_amount" name="total_amount"
-                     class="form-control mb-2" placeholder="Total" readonly>
+              <label>Total</label>
+              <input type="text" name="total_amount[]"
+                     class="form-control mb-2 item-total" placeholder="Total" readonly>
             </div>
           </div>
 
-          <label for="add_vehicle">Additional Vehicle Info</label>
-          <input type="text" id="add_vehicle" name="add_vehicle"
+          <label>Additional Vehicle Info</label>
+          <input type="text" name="add_vehicle[]"
                  class="form-control mb-2" placeholder="Additional Vehicle Info">
+          </div>
+          </div>
+          
+          <button type="button" class="btn btn-primary btn-sm mb-3" onclick="addItemBlock()">+ Add Another Item</button>
+          
+          <div class="text-right">
+              <h5 class="text-secondary">Grand Total: =N= <span id="grand_total_display">0.00</span></h5>
+          </div>
         </fieldset>
+        
+        <input type="hidden" name="items_json" id="items_json">
 
         <!-- Payment Details -->
         <fieldset class="form-group">

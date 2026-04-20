@@ -188,6 +188,27 @@ function fmtMoney($n) {
             </td></tr>
 
             <tr class="heading"><td>Vehicle information</td><td>Details</td></tr>
+            <?php 
+            $items = json_decode($inv['items_json'] ?? '', true);
+            if (!empty($items) && is_array($items)):
+                foreach($items as $idx => $it):
+            ?>
+            <tr class="item"><td><b>Item <?= $idx+1 ?> Name</b></td>
+                <td><?= htmlspecialchars(trim(($it['make']??'')." ".($it['model']??'')." ".($it['year']??''))) ?></td>
+            </tr>
+            <tr class="item"><td>Color</td><td><?= htmlspecialchars($it['color'] ?? '') ?></td></tr>
+            <tr class="item"><td>Chasis no:</td><td><?= htmlspecialchars($it['chasis'] ?? '') ?></td></tr>
+            <tr class="item"><td>Quantity</td><td><?= htmlspecialchars($it['quantity'] ?? '') ?></td></tr>
+            <tr class="item"><td>Unit Price</td><td>=N= <?= fmtMoney($it['price'] ?? 0) ?></td></tr>
+            <tr class="item"><td>Total</td><td>=N= <?= fmtMoney($it['total'] ?? 0) ?></td></tr>
+            <?php if(!empty($it['add_vehicle'])): ?>
+            <tr class="item"><td>Additional Info</td><td><?= htmlspecialchars($it['add_vehicle']) ?></td></tr>
+            <?php endif; ?>
+            <tr class="item space"><td></td><td></td></tr>
+            <?php
+                endforeach;
+            else:
+            ?>
             <tr class="item"><td>Name</td>
                 <td><?= htmlspecialchars("{$inv['vehicle_make']} {$inv['vehicle_model']} {$inv['vehicle_year']}") ?></td>
             </tr>
@@ -202,6 +223,7 @@ function fmtMoney($n) {
             <tr class="heading"><td>Cost Information</td><td>Details</td></tr>
             <tr class="item"><td>Quantity</td><td><?= htmlspecialchars($inv['quantity']) ?></td></tr>
             <tr class="item"><td>Vehicle Price</td><td>=N= <?= fmtMoney($inv['vehicle_price']) ?></td></tr>
+            <?php endif; ?>
             <tr class="item space"><td></td><td></td></tr>
             <tr class="item"><td>Total Amount</td><td>=N= <?= fmtMoney($inv['total_amount']) ?></td></tr>
             <tr class="item"><td>Amount in word(s)</td>
@@ -273,6 +295,7 @@ function fmtMoney($n) {
 
           <button class="btn-print"   id="print-button" onclick="window.print()">Print Invoice</button>
           <a      class="btn-edit"    href="invoice_edit.php?prefix_invoice_number=<?= urlencode($encrypted) ?>">Edit Invoice</a>
+          <a      class="btn-edit"    style="background-color:teal;" href="send_document.php?type=invoice&id=<?= urlencode($encrypted) ?>">Send Email</a>
           <!-- custom delete button -->
 <button id="deleteBtn" class="noprint btn-delete">Delete Invoice</button>
           <a      class="btn-close"   href="invoice_manager.php">Close</a>

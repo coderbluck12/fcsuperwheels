@@ -7,20 +7,24 @@ if (isset($_POST['receipt_submit'])) {
     $customer_address  = validate_input($_POST['customer_address']);
     $customer_phone    = validate_input($_POST['customer_phone']);
     $customer_email    = validate_input($_POST['customer_email']);
-    $vehicle_make      = validate_input($_POST['vehicle_make']);
-    $vehicle_model     = validate_input($_POST['vehicle_model']);
-    $vehicle_year      = validate_input($_POST['vehicle_year']);
-    $vehicle_chasis    = validate_input($_POST['vehicle_chasis']);
-    $vehicle_color     = validate_input($_POST['vehicle_color']);
-    $vehicle_price     = validate_input($_POST['vehicle_price']);
-    $payment_type      = validate_input($_POST['payment_type']);
-    $payment_method    = validate_input($_POST['payment_method']);
-    $payment_reference = validate_input($_POST['payment_reference']);
-    $amount_paid       = validate_input($_POST['amount_paid']);
-    $payment_date      = validate_input($_POST['payment_date']);
-    $add_vehicle       = validate_input($_POST['add_vehicle']);
-    $add_payment       = validate_input($_POST['add_payment']);
+    // Utility for array inputs
+    $get_f = function($k) { return is_array($_POST[$k] ?? null) ? ($_POST[$k][0] ?? '') : ($_POST[$k] ?? ''); };
+
+    $vehicle_make      = validate_input($get_f('vehicle_make'));
+    $vehicle_model     = validate_input($get_f('vehicle_model'));
+    $vehicle_year      = validate_input($get_f('vehicle_year'));
+    $vehicle_chasis    = validate_input($get_f('vehicle_chasis'));
+    $vehicle_color     = validate_input($get_f('vehicle_color'));
+    $vehicle_price     = validate_input($get_f('vehicle_price'));
+    $payment_type      = validate_input($_POST['payment_type'] ?? '');
+    $payment_method    = validate_input($_POST['payment_method'] ?? '');
+    $payment_reference = validate_input($_POST['payment_reference'] ?? '');
+    $amount_paid       = validate_input($_POST['amount_paid'] ?? '');
+    $payment_date      = validate_input($_POST['payment_date'] ?? '');
+    $add_vehicle       = validate_input($get_f('add_vehicle'));
+    $add_payment       = validate_input($_POST['add_payment'] ?? '');
     $signature_id      = !empty($_POST['signature_id']) ? (int)$_POST['signature_id'] : null;
+    $items_json        = $_POST['items_json'] ?? '';
 
     $prefix_receipt_number = generateUniqueNumeric();
     $time_created = date('Y-m-d H:i:s');
@@ -46,7 +50,8 @@ if (isset($_POST['receipt_submit'])) {
         time_created = :time_created,
         add_payment = :add_payment,
         add_vehicle = :add_vehicle,
-        signature_id = :signature_id
+        signature_id = :signature_id,
+        items_json = :items_json
     ");
 
     // Bind parameters
@@ -69,6 +74,7 @@ if (isset($_POST['receipt_submit'])) {
     $stmt->bindParam(':time_created', $time_created);
     $stmt->bindParam(':add_payment', $add_payment);
     $stmt->bindParam(':add_vehicle', $add_vehicle);
+    $stmt->bindParam(':items_json', $items_json);
 
     if (is_null($signature_id)) {
         $stmt->bindValue(':signature_id', null, PDO::PARAM_NULL);

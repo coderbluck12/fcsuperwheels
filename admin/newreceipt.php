@@ -16,20 +16,61 @@ $signatures = $sigStmt->fetchAll(PDO::FETCH_ASSOC);
   <link rel="stylesheet" href="vendor/font-awesome-5/css/fontawesome-all.min.css">
   <link href="css/theme.css" rel="stylesheet">
   <script>
+    function calculateTotal() {
+      let grandTotal = 0;
+      document.querySelectorAll('.item-price').forEach(inp => {
+          grandTotal += parseFloat(inp.value)||0;
+      });
+      let gtDisplay = document.getElementById('grand_total_display');
+      if(gtDisplay) gtDisplay.innerText = grandTotal.toFixed(2);
+      return grandTotal;
+    }
+    
     function validateNumbers() {
-      const price = parseFloat(document.getElementById("vehicle_price").value);
+      const price = calculateTotal();
       const paid = parseFloat(document.getElementById("amount_paid").value);
       const type = document.getElementById("payment_type").value;
 
-      if (!isNaN(price) && paid > price) {
+      if (!isNaN(price) && price > 0 && paid > price) {
         alert("Amount paid cannot be greater than vehicle price.");
         return false;
       }
-      if (type === "full" && !isNaN(price) && paid < price) {
+      if (type === "full" && !isNaN(price) && price > 0 && paid < price) {
         alert("Full payment must match the vehicle price.");
         return false;
       }
+      
+      let items = [];
+      document.querySelectorAll('.item-block').forEach((block) => {
+        items.push({
+           make: block.querySelector('[name="vehicle_make[]"]').value,
+           model: block.querySelector('[name="vehicle_model[]"]').value,
+           year: block.querySelector('[name="vehicle_year[]"]').value,
+           chasis: block.querySelector('[name="vehicle_chasis[]"]').value,
+           color: block.querySelector('[name="vehicle_color[]"]').value,
+           price: block.querySelector('[name="vehicle_price[]"]').value,
+           add_vehicle: block.querySelector('[name="add_vehicle[]"]').value
+        });
+      });
+      document.getElementById('items_json').value = JSON.stringify(items);
       return true;
+    }
+
+    function addItemBlock() {
+      let container = document.getElementById('itemsContainer');
+      let firstBlock = container.querySelector('.item-block');
+      let newBlock = firstBlock.cloneNode(true);
+      newBlock.querySelectorAll('input').forEach(inp => inp.value = '');
+      
+      if(!newBlock.querySelector('.btn-remove-item')) {
+          let btn = document.createElement('button');
+          btn.type = 'button';
+          btn.className = 'btn btn-sm btn-danger btn-remove-item mt-2';
+          btn.innerText = 'Remove Vehicle';
+          btn.onclick = function() { newBlock.remove(); calculateTotal(); };
+          newBlock.appendChild(btn);
+      }
+      container.appendChild(newBlock);
     }
   </script>
   <style>
@@ -277,38 +318,49 @@ $signatures = $sigStmt->fetchAll(PDO::FETCH_ASSOC);
             <h2>Vehicle Information</h2>
           </div>
           <div class="form-card-body">
+            <div id="itemsContainer">
+            <div class="item-block border p-3 mb-3 bg-light" style="border-radius: 8px;">
             <div class="field-grid-2">
               <div class="field-group">
                 <label>Make *</label>
-                <input type="text" name="vehicle_make" placeholder="e.g. Toyota" required>
+                <input type="text" name="vehicle_make[]" placeholder="e.g. Toyota" required>
               </div>
               <div class="field-group">
                 <label>Model *</label>
-                <input type="text" name="vehicle_model" placeholder="e.g. Camry" required>
+                <input type="text" name="vehicle_model[]" placeholder="e.g. Camry" required>
               </div>
               <div class="field-group">
                 <label>Year *</label>
-                <input type="text" name="vehicle_year" placeholder="e.g. 2020" required>
+                <input type="text" name="vehicle_year[]" placeholder="e.g. 2020" required>
               </div>
               <div class="field-group">
                 <label>Chassis No *</label>
-                <input type="text" name="vehicle_chasis" placeholder="Chassis number" required>
+                <input type="text" name="vehicle_chasis[]" placeholder="Chassis number" required>
               </div>
               <div class="field-group">
                 <label>Color *</label>
-                <input type="text" name="vehicle_color" placeholder="e.g. Pearl White" required>
+                <input type="text" name="vehicle_color[]" placeholder="e.g. Pearl White" required>
               </div>
               <div class="field-group">
                 <label>Vehicle Price <span style="font-weight:400; text-transform: none;">(optional)</span></label>
-                <input type="number" name="vehicle_price" id="vehicle_price" placeholder="₦ 0.00">
+                <input type="number" name="vehicle_price[]" class="item-price" placeholder="₦ 0.00" oninput="calculateTotal()">
               </div>
               <div class="field-group field-full">
                 <label>Additional Vehicle Info <span style="font-weight:400; text-transform: none;">(optional)</span></label>
-                <input type="text" name="add_vehicle" placeholder="Any other details about the vehicle">
+                <input type="text" name="add_vehicle[]" placeholder="Any other details about the vehicle">
               </div>
+            </div>
+            </div>
+            </div>
+            
+            <button type="button" class="btn btn-sm mt-1" style="background:#059669; color:white;" onclick="addItemBlock()">+ Add Another Vehicle</button>
+            <div class="text-right mt-3">
+                <h5 class="text-secondary" style="font-size:1.1rem;">Total Vehicle Price: =N= <span id="grand_total_display">0.00</span></h5>
             </div>
           </div>
         </div>
+        
+        <input type="hidden" name="items_json" id="items_json">
 
         <!-- Payment Information -->
         <div class="form-card">
